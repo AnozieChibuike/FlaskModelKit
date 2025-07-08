@@ -1,157 +1,166 @@
-[![PyPI Version](https://img.shields.io/pypi/v/FlaskSQLAlchemyBaseModel.svg)](https://pypi.org/project/FlaskSQLAlchemyBaseModel/)
-[![Python Versions](https://img.shields.io/pypi/pyversions/FlaskSQLAlchemyBaseModel.svg)](https://pypi.org/project/FlaskSQLAlchemyBaseModel/)
-[![License](https://img.shields.io/pypi/l/FlaskSQLAlchemyBaseModel.svg)](https://github.com/AnozieChibuike/FlaskSQLAlchemyBaseModel/blob/master/LICENSE)
+# FlaskSQLAlchemyBaseModel
 
-# Description
+## Project Title
 
-`FlaskSQLAlchemyBaseModel` package provides a foundation for building SQLAlchemy-based ORM models in a Flask application. It offers common functionality required by most models, including automatic handling of unique identifiers, timestamps, and convenience methods for CRUD operations. This package streamlines the development process by offering a consistent and reusable base class for database models, ensuring that every model inherits essential features and reduces boilerplate code.
+**FlaskSQLAlchemyBaseModel**
 
-## Key Features
+## Short Description
 
-- UUID Primary Key: Automatically generates a unique identifier for each record.
-- Timestamps: Maintains created_at and updated_at fields for each record, updated automatically.
-- CRUD Operations: Provides methods for saving, deleting, and closing database sessions.
-- Dictionary Representation: Converts model instances to dictionaries, including related objects.
-- Convenience Methods: Includes class methods to retrieve all records, retrieve records by ID, and retrieve records by ID or return a 404 error if not found.
+`FlaskSQLAlchemyBaseModel` is a Python package designed to simplify the creation and management of SQLAlchemy-based ORM models within Flask applications. It provides a robust `BaseModel` class that encapsulates common functionalities such as automatic ID generation (UUID), timestamp management (`created_at`, `updated_at`), and a comprehensive suite of convenience methods for standard database operations (CRUD). By inheriting from this base class, developers can significantly reduce boilerplate code and ensure consistency across their application's data models.
 
-## Installation
+## Features Overview
 
-You can install this package using `pip`:
+This package streamlines Flask-SQLAlchemy development with the following key features:
+
+*   **UUID Primary Key:** Automatically generates a unique, immutable identifier (UUID) for each new record, ensuring global uniqueness and easy referencing.
+*   **Automatic Timestamps:** Manages `created_at` and `updated_at` fields, automatically populating the creation timestamp and updating the modification timestamp on every save operation.
+*   **Simplified CRUD Operations:** Offers intuitive instance methods (`save`, `delete`, `update`) for persisting, removing, and modifying records.
+*   **Data Serialization:** Provides a `to_dict()` method to easily convert model instances into Python dictionaries, including handling of related objects for seamless API responses.
+*   **Comprehensive Querying Utilities:** Includes a variety of class methods for efficient data retrieval:
+    *   `all()`: Fetch all records of a model.
+    *   `get(id)`: Retrieve a single record by its primary key ID.
+    *   `get_or_404(id)`: Retrieve a single record by ID, raising a 404 HTTP error if not found.
+    *   `filter_one(**kwargs)`: Get a single record matching specific criteria.
+    *   `filter_all(**kwargs)`: Get all records matching specific criteria.
+    *   `filter_and_count_all(**kwargs)`: Count records matching specific criteria.
+    *   `count_all()`: Get the total count of all records for a model.
+    *   `exists(**kwargs)`: Check if a record matching certain criteria exists.
+    *   `paginate(page, per_page)`: Efficiently paginate query results, returning items, total count, pages, current page, and items per page.
+
+## Installation Instructions
+
+To install `FlaskSQLAlchemyBaseModel`, use `pip`:
 
 ```bash
 pip install FlaskSQLAlchemyBaseModel
 ```
 
-## Usage
+## Usage Examples
 
-### Initialize with your flask app
+### 1. Initializing with Your Flask Application
+
+Integrate the `db` instance provided by `FlaskSQLAlchemyBaseModel` with your Flask application:
 
 ```python
+from flask import Flask
 from flasksqlalchemybasemodel import db
 
-app = Flask(__name__) # or you can replace with your flask instance
+# Create your Flask app instance
+app = Flask(__name__)
 
-yourdb = db.init_app(app)
+# Configure your database URI (e.g., SQLite)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///your_database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize db with your Flask app
+db.init_app(app)
+
+# Recommended: Create tables within an application context
+with app.app_context():
+    db.create_all()
 ```
 
-### Import and use the BaseModel with your models
+### 2. Defining Your Models
+
+Inherit from `BaseModel` to create your application's data models:
 
 ```python
-from flasksqlalchemybasemodel import BaseModel # Import the baseModel
+from flasksqlalchemybasemodel import db, BaseModel
 
-# for example a user model
 class User(BaseModel):
     __tablename__ = 'users'
-    name = db.Column(db.String(50))
-    email = db.Column(db.String(100), unique=True)
+    name = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    # Add other model-specific columns here
 ```
 
-### Using the inherited methods
+### 3. Performing CRUD Operations
 
-- `save` : <span>Used for saving an item to the database</span>
-  <p>This will save you the time of doing </p>
+Leverage the inherited methods for database interactions:
 
-    ```python
-      db.session.save(<instance>)
-      db.session.commit()
-    ```
+```python
+from your_app_module import db, User # Assuming User model is in your app module
 
-  Example:
+# --- Create (Save) ---
+# Create a new user instance
+new_user = User(name="Alice Smith", email="alice@example.com")
+# Save the user to the database
+new_user.save()
+print(f"Created user: {new_user.name} with ID: {new_user.id}")
 
-    ```python
-    from flasksqlalchemybasemodel import BaseModel # Import the baseModel
+# --- Read (Retrieve) ---
+# Get a user by ID
+user_by_id = User.get(new_user.id)
+if user_by_id:
+    print(f"Retrieved user by ID: {user_by_id.name}")
 
-    # for example a user model
-    class User(BaseModel):
-        __tablename__ = 'users'
-        name = db.Column(db.String(50))
-        email = db.Column(db.String(100), unique=True)
+# Filter users by name
+alice = User.filter_one(name="Alice Smith")
+if alice:
+    print(f"Filtered user by name: {alice.email}")
 
-    user = User(name="John Doe",email="johnddoe@example.com")
+# Get all users
+all_users = User.all()
+print(f"Total users in DB: {len(all_users)}")
 
-    user.save() # Saves the instance to your db
-    ```
-    ---
+# --- Update ---
+# Update an existing user's email
+if alice:
+    alice.update({"email": "alice.smith@example.com"})
+    print(f"Updated user email to: {alice.email}")
 
-- `delete` : <span>Used for deleting an item from the database</span>
+# --- Delete ---
+# Delete the user
+if alice:
+    alice.delete()
+    print(f"Deleted user: {alice.name}")
 
-    <p>This will save you the time of doing </p>
+# Verify deletion
+deleted_user = User.get(new_user.id)
+if deleted_user is None:
+    print("User successfully deleted.")
 
-    ```
-    db.session.delete(<instance_that_exists_in_the_db>)
-    db.session.commit()
-    ```
-    Example:
+# --- To Dictionary Conversion ---
+another_user = User(name="Bob Johnson", email="bob@example.com")
+another_user.save()
+user_dict = another_user.to_dict()
+print("User as dictionary:", user_dict)
 
-    ```python
-    from flasksqlalchemybasemodel import BaseModel # Import the baseModel
+# --- Pagination ---
+# (Assume many users are created for this example)
+# first_page = User.paginate(page=1, per_page=10)
+# print(f"First page items: {len(first_page['items'])}, Total: {first_page['total']}")
+```
 
-    # for example a user model
-    class User(BaseModel):
-        __tablename__ = 'users'
-        name = db.Column(db.String(50))
-        email = db.Column(db.String(100), unique=True)
+## File Structure Summary
 
-    user = User(name="John Doe",email="johnddoe@example.com")
+The project follows a standard Python package structure:
 
-    user.save() # Saves the instance to your db
+```
+.
+├── .github/                 # GitHub Actions workflows for CI/CD
+│   ├── workflows/
+│   │   ├── installation.yml # Workflow to install the package dependencies
+│   │   └── tests.yml        # Workflow to run tests across Python versions
+├── flasksqlalchemybasemodel/ # The core Python package source code
+│   ├── __init__.py          # Package initialization
+│   └── src.py               # Contains the BaseModel class and db instance
+├── tests/                   # Unit and integration tests for the package
+│   ├── __init__.py
+│   ├── app.py               # Test Flask application setup
+│   ├── database/
+│   │   └── README.md        # Note about the test database
+│   └── testAll.py           # Comprehensive tests for BaseModel functionalities
+├── .gitignore               # Files and directories to be ignored by Git
+├── LICENSE                  # MIT License file
+├── README.md                # This README file
+├── pyproject.toml           # Poetry project configuration and dependencies
+└── requirements.txt         # Pip dependency list (generated from pyproject.toml)
+```
 
-    user.delete() # This then deletes the saved instance
-    ```
-    ---
-- `to_dict` : <span>Used for returning the instance as a python dictionary</span>
+## Important Notes
 
-    <p>Example:</p>
-
-    ```python
-    from flasksqlalchemybasemodel import BaseModel # Import the baseModel
-
-    # for example a user model
-    class User(BaseModel):
-        __tablename__ = 'users'
-        name = db.Column(db.String(50))
-        email = db.Column(db.String(100), unique=True)
-
-    user = User(name="John Doe",email="johnddoe@example.com")
-
-    user.save() # Saves the instance to your db
-
-    userDict = user.to_dict() 
-    print(userDict)
-    """
-    output
-    {
-        "id": "Some random uuid", # auto-generated by the package
-        "created_at": <datetimeObject>, # Time instance was created
-        "updated_at": <datetimeObject>, # Time instance was updated last
-        "name": "John Doe",
-        "email": "johnddoe@example.com"
-    }
-    """
-    ```
-    
-    And many more methods... look into the source code to get the many methods
-    
-
-## Contributing
-
-Contributions are welcome! If you'd like to contribute to this project, please follow these steps:
-
-1.  Fork the repository.
-2.  Create a new branch for your feature or bug fix.
-3.  Make your changes and test them thoroughly.
-4.  Create a pull request with a clear description of your changes.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](https://mit-license.org/) file for details.
-
-## Acknowledgments
-
-- Inspired by [Al-Areef](https://github.com/NUCCASSJNR)
-
-## Contact
-
-- Anozie Joel
-- Email: chibuikeanozie0@gmail.com
-- GitHub: [Anozie Chibuike](https://github.com/AnozieChibuike)
+*   **Dependencies:** This package relies on `Flask`, `Flask-SQLAlchemy`, and `SQLAlchemy`. Ensure these are installed in your environment.
+*   **Testing:** The `tests/` directory provides extensive unit tests using Python's `unittest` framework, demonstrating the expected behavior of all `BaseModel` methods.
+*   **CI/CD:** GitHub Actions workflows are configured to automatically test the module's installation and run its test suite against multiple Python versions (`3.9`, `3.10`, `3.11`, `3.12`) on every push and pull request to the `master` branch, ensuring reliability and compatibility.
+*   **Licensing:** The project is open-source and distributed under the MIT License, allowing for broad usage and modification.
