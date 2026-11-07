@@ -98,10 +98,14 @@ def test_mixin_with_own_db():
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite://"
     own.init_app(app)
     with app.app_context():
-        own.create_all()
-        Note.create(body="hi")
-        assert Note.filter_one(body="hi").body == "hi"
-        assert Note.metadata is own.metadata and Note.metadata is not db.metadata
+        try:
+            own.create_all()
+            Note.create(body="hi")
+            assert Note.filter_one(body="hi").body == "hi"
+            assert Note.metadata is own.metadata and Note.metadata is not db.metadata
+        finally:
+            own.session.remove()
+            own.engine.dispose()
 
 
 def test_mixin_without_db_model_errors_clearly():

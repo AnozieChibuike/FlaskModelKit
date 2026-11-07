@@ -10,9 +10,12 @@ def app():
     app = create_app()
     with app.app_context():
         db.create_all()
-        yield app
-        db.session.remove()
-        db.drop_all()
+        try:
+            yield app
+        finally:
+            db.session.remove()
+            db.drop_all()
+            db.engine.dispose()  # close SQLite connections (ResourceWarning on 3.13+)
 
 
 @pytest.fixture

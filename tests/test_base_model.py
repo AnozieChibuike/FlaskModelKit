@@ -20,6 +20,7 @@ class BaseModelTestCase(unittest.TestCase):
     def tearDown(self):
         db.session.remove()
         db.drop_all()
+        db.engine.dispose()  # close SQLite connections (ResourceWarning on 3.13+)
         self.app_context.pop()
 
     def test_create_instance(self):

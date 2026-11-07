@@ -28,10 +28,13 @@ def test_columns_match_published_schema():
         sa.Column("updated_at", sa.DateTime, nullable=False),
         sa.Column("name", sa.String(50)),
     )
-    legacy.create_all(engine)
+    try:
+        legacy.create_all(engine)
 
-    from .models import Author  # noqa: F401
+        from .models import Author  # noqa: F401
 
-    current = sa.MetaData()
-    db.metadata.tables["author"].to_metadata(current)
-    assert _diff(engine, current) == []
+        current = sa.MetaData()
+        db.metadata.tables["author"].to_metadata(current)
+        assert _diff(engine, current) == []
+    finally:
+        engine.dispose()
