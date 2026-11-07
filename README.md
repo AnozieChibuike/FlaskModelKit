@@ -1,166 +1,108 @@
 # FlaskSQLAlchemyBaseModel
 
-## Project Title
+[![Tests](https://github.com/AnozieChibuike/FlaskSQLAlchemyBaseModel/actions/workflows/tests.yml/badge.svg)](https://github.com/AnozieChibuike/FlaskSQLAlchemyBaseModel/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/FlaskSQLAlchemyBaseModel)](https://pypi.org/project/FlaskSQLAlchemyBaseModel/)
 
-**FlaskSQLAlchemyBaseModel**
+Composable model mixins for Flask-SQLAlchemy.
 
-## Short Description
+Most Flask projects end up writing the same base model: a UUID primary key, `created_at`/`updated_at`, `save()`, `to_dict()`, maybe soft delete. Each copy has its own subtle bugs. This package gives you those pieces as small mixins that you combine per model. The edge cases are handled and tested.
 
-`FlaskSQLAlchemyBaseModel` is a Python package designed to simplify the creation and management of SQLAlchemy-based ORM models within Flask applications. It provides a robust `BaseModel` class that encapsulates common functionalities such as automatic ID generation (UUID), timestamp management (`created_at`, `updated_at`), and a comprehensive suite of convenience methods for standard database operations (CRUD). By inheriting from this base class, developers can significantly reduce boilerplate code and ensure consistency across their application's data models.
+```python
+class Post(UUIDMixin, TimestampMixin, SoftDeleteMixin, CRUDMixin, SerializerMixin, db.Model):
+    title = db.Column(db.String(200), nullable=False)
+```
 
-## Features Overview
+## Features
 
-This package streamlines Flask-SQLAlchemy development with the following key features:
+- **Pick what you need.** UUID or integer keys, timestamps, soft delete, CRUD helpers and serialisation are separate mixins. `BaseModelMixin` bundles the common set.
+- **Soft delete that actually hides rows.** Deleted rows are filtered out of *every* ORM query: helpers, `Model.query`, `db.select()`, `session.get()` and relationship loads.
+- **Safe updates.** `update(request.json)` only sets mapped columns and never touches `id`, timestamps or any field you protect.
+- **Safe serialisation.** `to_dict()` never outputs hidden fields (such as password hashes), limits relationship depth, never loops on `back_populates`, and returns JSON-ready output on request.
+- **Efficient queries.** Counts and existence checks run in SQL. Pagination is stably ordered.
+- **Migration-friendly.** Defaults are generated in Python, so Flask-Migrate/Alembic produces clean migrations with no spurious diffs.
+- **Typed.** Ships `py.typed`, and class methods return your model type.
+- **Works with your own `db`.** No global `SQLAlchemy()` is forced on you.
 
-*   **UUID Primary Key:** Automatically generates a unique, immutable identifier (UUID) for each new record, ensuring global uniqueness and easy referencing.
-*   **Automatic Timestamps:** Manages `created_at` and `updated_at` fields, automatically populating the creation timestamp and updating the modification timestamp on every save operation.
-*   **Simplified CRUD Operations:** Offers intuitive instance methods (`save`, `delete`, `update`) for persisting, removing, and modifying records.
-*   **Data Serialization:** Provides a `to_dict()` method to easily convert model instances into Python dictionaries, including handling of related objects for seamless API responses.
-*   **Comprehensive Querying Utilities:** Includes a variety of class methods for efficient data retrieval:
-    *   `all()`: Fetch all records of a model.
-    *   `get(id)`: Retrieve a single record by its primary key ID.
-    *   `get_or_404(id)`: Retrieve a single record by ID, raising a 404 HTTP error if not found.
-    *   `filter_one(**kwargs)`: Get a single record matching specific criteria.
-    *   `filter_all(**kwargs)`: Get all records matching specific criteria.
-    *   `filter_and_count_all(**kwargs)`: Count records matching specific criteria.
-    *   `count_all()`: Get the total count of all records for a model.
-    *   `exists(**kwargs)`: Check if a record matching certain criteria exists.
-    *   `paginate(page, per_page)`: Efficiently paginate query results, returning items, total count, pages, current page, and items per page.
+Requires Python 3.10+, Flask 3, Flask-SQLAlchemy 3.1+ and SQLAlchemy 2.0.16+.
 
-## Installation Instructions
-
-To install `FlaskSQLAlchemyBaseModel`, use `pip`:
+## Install
 
 ```bash
 pip install FlaskSQLAlchemyBaseModel
 ```
 
-## Usage Examples
-
-### 1. Initializing with Your Flask Application
-
-Integrate the `db` instance provided by `FlaskSQLAlchemyBaseModel` with your Flask application:
+## Quick start
 
 ```python
-from flask import Flask
-from flasksqlalchemybasemodel import db
+from flask import Flask, jsonify, request
+from flask_sqlalchemy import SQLAlchemy
+from flasksqlalchemybasemodel import BaseModelMixin
 
-# Create your Flask app instance
+db = SQLAlchemy()
+
+
+class User(BaseModelMixin, db.Model):          # mixins go before db.Model
+    __hidden_fields__ = frozenset({"password_hash"})
+
+    name = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200))
+
+
 app = Flask(__name__)
-
-# Configure your database URI (e.g., SQLite)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///your_database.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Initialize db with your Flask app
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
 db.init_app(app)
 
-# Recommended: Create tables within an application context
-with app.app_context():
-    db.create_all()
+
+@app.post("/users")
+def create_user():
+    data = request.json
+    user = User.create(name=data["name"], email=data["email"])
+    return jsonify(user.to_dict(json_safe=True)), 201
+
+
+@app.patch("/users/<id>")
+def update_user(id):
+    user = User.get_or_404(id)
+    user.update(request.json)                   # id/timestamps can't be overwritten
+    return jsonify(user.to_dict(json_safe=True))
+
+
+@app.get("/users")
+def list_users():
+    page = User.paginate(page=request.args.get("page", 1, type=int), per_page=20)
+    page["items"] = [u.to_dict(json_safe=True) for u in page["items"]]
+    return jsonify(page)
 ```
 
-### 2. Defining Your Models
-
-Inherit from `BaseModel` to create your application's data models:
+Don't have a `db` yet? Use the bundled one:
 
 ```python
 from flasksqlalchemybasemodel import db, BaseModel
 
 class User(BaseModel):
-    __tablename__ = 'users'
-    name = db.Column(db.String(50), nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
-    # Add other model-specific columns here
+    name = db.Column(db.String(50))
 ```
 
-### 3. Performing CRUD Operations
+## Documentation
 
-Leverage the inherited methods for database interactions:
+| Guide | |
+|---|---|
+| [Mixins](docs/mixins.md) | Every mixin, how to combine them, and the one ordering rule |
+| [CRUD & queries](docs/crud-and-queries.md) | `create`, `save`, `update`, `get`, filters, counts, pagination, transactions |
+| [Serialisation](docs/serialization.md) | `to_dict()`, hidden fields, depth, JSON output |
+| [Soft delete](docs/soft-delete.md) | How rows are hidden, including deleted rows, restoring |
+| [Migrations](docs/migrations.md) | Flask-Migrate/Alembic, adding mixins to existing tables |
 
-```python
-from your_app_module import db, User # Assuming User model is in your app module
+## Development
 
-# --- Create (Save) ---
-# Create a new user instance
-new_user = User(name="Alice Smith", email="alice@example.com")
-# Save the user to the database
-new_user.save()
-print(f"Created user: {new_user.name} with ID: {new_user.id}")
-
-# --- Read (Retrieve) ---
-# Get a user by ID
-user_by_id = User.get(new_user.id)
-if user_by_id:
-    print(f"Retrieved user by ID: {user_by_id.name}")
-
-# Filter users by name
-alice = User.filter_one(name="Alice Smith")
-if alice:
-    print(f"Filtered user by name: {alice.email}")
-
-# Get all users
-all_users = User.all()
-print(f"Total users in DB: {len(all_users)}")
-
-# --- Update ---
-# Update an existing user's email
-if alice:
-    alice.update({"email": "alice.smith@example.com"})
-    print(f"Updated user email to: {alice.email}")
-
-# --- Delete ---
-# Delete the user
-if alice:
-    alice.delete()
-    print(f"Deleted user: {alice.name}")
-
-# Verify deletion
-deleted_user = User.get(new_user.id)
-if deleted_user is None:
-    print("User successfully deleted.")
-
-# --- To Dictionary Conversion ---
-another_user = User(name="Bob Johnson", email="bob@example.com")
-another_user.save()
-user_dict = another_user.to_dict()
-print("User as dictionary:", user_dict)
-
-# --- Pagination ---
-# (Assume many users are created for this example)
-# first_page = User.paginate(page=1, per_page=10)
-# print(f"First page items: {len(first_page['items'])}, Total: {first_page['total']}")
+```bash
+pip install -e . pytest alembic
+pytest
 ```
 
-## File Structure Summary
+CI runs the suite on Python 3.10–3.13 and against the minimum supported dependency versions.
 
-The project follows a standard Python package structure:
+## License
 
-```
-.
-├── .github/                 # GitHub Actions workflows for CI/CD
-│   ├── workflows/
-│   │   ├── installation.yml # Workflow to install the package dependencies
-│   │   └── tests.yml        # Workflow to run tests across Python versions
-├── flasksqlalchemybasemodel/ # The core Python package source code
-│   ├── __init__.py          # Package initialization
-│   └── src.py               # Contains the BaseModel class and db instance
-├── tests/                   # Unit and integration tests for the package
-│   ├── __init__.py
-│   ├── app.py               # Test Flask application setup
-│   ├── database/
-│   │   └── README.md        # Note about the test database
-│   └── testAll.py           # Comprehensive tests for BaseModel functionalities
-├── .gitignore               # Files and directories to be ignored by Git
-├── LICENSE                  # MIT License file
-├── README.md                # This README file
-├── pyproject.toml           # Poetry project configuration and dependencies
-└── requirements.txt         # Pip dependency list (generated from pyproject.toml)
-```
-
-## Important Notes
-
-*   **Dependencies:** This package relies on `Flask`, `Flask-SQLAlchemy`, and `SQLAlchemy`. Ensure these are installed in your environment.
-*   **Testing:** The `tests/` directory provides extensive unit tests using Python's `unittest` framework, demonstrating the expected behavior of all `BaseModel` methods.
-*   **CI/CD:** GitHub Actions workflows are configured to automatically test the module's installation and run its test suite against multiple Python versions (`3.9`, `3.10`, `3.11`, `3.12`) on every push and pull request to the `master` branch, ensuring reliability and compatibility.
-*   **Licensing:** The project is open-source and distributed under the MIT License, allowing for broad usage and modification.
+MIT

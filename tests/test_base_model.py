@@ -3,14 +3,10 @@ import unittest
 from datetime import datetime
 from .app import create_app
 
-import sys
-import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
 from flasksqlalchemybasemodel import db, BaseModel
 
 class TestModel(BaseModel):
+    __test__ = False  # not a pytest test class
     __tablename__ = 'test_model'
     name = db.Column(db.String(50), nullable=False)
 
