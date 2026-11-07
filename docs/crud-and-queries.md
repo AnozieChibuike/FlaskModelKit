@@ -19,14 +19,19 @@ user.delete()                                             # removes the row
 `update()` only sets attributes that are mapped columns or relationships. It silently ignores:
 
 - unknown keys (`{"nonsense": 1}`) and method names (`{"save": "x"}`)
-- protected fields: `id`, `created_at`, `updated_at` and `deleted_at`
+- protected fields: `id`, `created_at`, `updated_at` and `deleted_at` by default, plus any you mark
 
-So passing `request.json` directly can't change a primary key or forge a timestamp. To protect more fields, extend the set:
+So passing `request.json` directly can't change a primary key or forge a timestamp. Mark more fields protected where you declare them:
 
 ```python
+from flask_modelkit import protected_column, secret_column
+
 class User(BaseModelMixin, db.Model):
-    __protected_fields__ = BaseModelMixin.__protected_fields__ | {"is_admin", "email_verified"}
+    is_admin = protected_column(db.Boolean, default=False)
+    password_hash = secret_column(db.String(255))     # protected and hidden
 ```
+
+See [Hidden vs protected fields](hidden-and-protected.md) for every way to mark fields and how the two differ.
 
 Protection applies to `update()` and `create_or_abort()`. Plain assignment (`user.is_admin = True`) and `create(...)` still work for trusted code. Don't pass raw request data to `create(**request.json)`: use `create_or_abort(request.json)`.
 

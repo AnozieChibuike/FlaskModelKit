@@ -12,6 +12,8 @@ from .mixins import (
     TimestampMixin,
     UUIDMixin,
     hidden_column,
+    protected_column,
+    secret_column,
     utcnow,
 )
 
@@ -30,5 +32,7 @@ __all__ = [
     "UUIDMixin",
     "db",
     "hidden_column",
+    "protected_column",
+    "secret_column",
     "utcnow",
 ]

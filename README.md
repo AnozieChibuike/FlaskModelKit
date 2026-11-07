@@ -18,7 +18,8 @@ class Post(UUIDMixin, TimestampMixin, SoftDeleteMixin, CRUDMixin, SerializerMixi
 
 - **Pick what you need.** UUID or integer keys, timestamps, soft delete, CRUD helpers and serialisation are separate mixins. `BaseModelMixin` bundles the common set.
 - **Soft delete that actually hides rows.** Deleted rows are filtered out of *every* ORM query: helpers, `Model.query`, `db.select()`, `session.get()` and relationship loads.
-- **Safe updates.** `update(request.json)` only sets mapped columns and never touches `id`, timestamps or any field you protect.
+- **Hidden and protected fields.** Mark a column `hidden` (never sent to the client), `protected` (never set from client input) or both, right where you declare it.
+- **Safe updates.** `update(request.json)` only sets mapped columns and never touches `id`, timestamps or any protected field.
 - **Create from request data in one line.** `create_or_abort(request.json)` drops unsafe keys, answers 400 naming every missing field, and 409 naming a duplicate unique field.
 - **Safe serialisation.** `to_dict()` never outputs hidden fields (such as password hashes), limits relationship depth, never loops on `back_populates`, and returns JSON-ready output on request.
 - **Efficient queries.** Counts and existence checks run in SQL. Pagination is stably ordered.
@@ -39,7 +40,7 @@ pip install flask-modelkit
 ```python
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
-from flask_modelkit import BaseModelMixin, hidden_column
+from flask_modelkit import BaseModelMixin, protected_column, secret_column
 
 db = SQLAlchemy()
 
@@ -47,7 +48,8 @@ db = SQLAlchemy()
 class User(BaseModelMixin, db.Model):          # mixins go before db.Model
     name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    password_hash = hidden_column(db.String(200))   # never in to_dict()
+    is_admin = protected_column(db.Boolean, default=False)   # input can't set it
+    password_hash = secret_column(db.String(200))            # never read out, never written in
 
 
 app = Flask(__name__)
@@ -68,7 +70,7 @@ def create_user():
 @app.patch("/users/<id>")
 def update_user(id):
     user = User.get_or_404(id)
-    user.update(request.json)                   # id/timestamps can't be overwritten
+    user.update(request.json)                   # id, timestamps, is_admin, password_hash can't be set
     return jsonify(user.to_dict(json_safe=True))
 
 
@@ -94,6 +96,7 @@ class User(BaseModel):
 |---|---|
 | [Mixins](docs/mixins.md) | Every mixin, how to combine them, and the one ordering rule |
 | [CRUD & queries](docs/crud-and-queries.md) | `create`, `create_or_abort`, `save`, `update`, `get`, filters, counts, pagination, transactions |
+| [Hidden vs protected](docs/hidden-and-protected.md) | Controlling what goes out to and comes in from the client |
 | [Serialisation](docs/serialization.md) | `to_dict()`, hidden fields, depth, JSON output |
 | [Soft delete](docs/soft-delete.md) | How rows are hidden, including deleted rows, restoring |
 | [Migrations](docs/migrations.md) | Flask-Migrate/Alembic, adding mixins to existing tables |

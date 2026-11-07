@@ -45,6 +45,8 @@ __all__ = [
     "MissingFieldsError",
     "DuplicateValueError",
     "hidden_column",
+    "protected_column",
+    "secret_column",
     "utcnow",
 ]
 
@@ -275,8 +277,11 @@ class PaginationReturn(TypedDict):
 class CRUDMixin(_SessionMixin):
     """``save``/``update``/``delete`` plus class-level query helpers."""
 
-    #: Attributes ``update()`` will never set. Extend per model:
-    #: ``__protected_fields__ = CRUDMixin.__protected_fields__ | {"is_admin"}``
+    #: Attributes ``update()``/``create_or_abort()`` never set from input.
+    #: Prefer marking columns with ``protected_column(...)`` or
+    #: ``info={"protected": True}``; this set is for fields you don't declare
+    #: yourself. Both are combined. Extend it with set union (``|``):
+    #: ``__protected_fields__ = CRUDMixin.__protected_fields__ | {"posts"}``
     __protected_fields__: ClassVar[frozenset[str]] = frozenset(
         {"id", "created_at", "updated_at", "deleted_at"}
     )
@@ -335,7 +340,17 @@ class CRUDMixin(_SessionMixin):
     @classmethod
     def _writable_fields(cls) -> set[str]:
         """Mapped columns/relationships that untrusted input may set."""
-        return set(sa.inspect(cls).attrs.keys()) - cls.__protected_fields__
+        return set(sa.inspect(cls).attrs.keys()) - cls._protected_keys()
+
+    @classmethod
+    def protected_fields(cls) -> frozenset[str]:
+        """Every field input can't set: ``__protected_fields__`` plus columns
+        and relationships marked ``info={"protected": True}``."""
+        return cls._protected_keys()
+
+    @classmethod
+    def _protected_keys(cls) -> frozenset[str]:
+        return cls.__protected_fields__ | _flagged_keys(cls, "protected")
 
     @classmethod
     def create_or_abort(
@@ -533,37 +548,63 @@ def _json_safe(value: Any) -> Any:
     return value
 
 
-def hidden_column(*args: Any, **kwargs: Any) -> Any:
-    """A ``mapped_column`` that ``to_dict()`` never serialises.
-
-    Takes the same arguments as ``db.Column``/``mapped_column``::
-
-        password_hash = hidden_column(db.String(200))
-
-    Equivalent to passing ``info={"hidden": True}``, which also works on
-    ``db.Column``, ``mapped_column`` and ``db.relationship``.
-    """
+def _flagged_column(flags: tuple[str, ...], args: Any, kwargs: dict[str, Any]) -> Any:
     info = dict(kwargs.pop("info", None) or {})
-    info["hidden"] = True
+    info.update(dict.fromkeys(flags, True))
     return mapped_column(*args, info=info, **kwargs)
 
 
-_hidden_cache: weakref.WeakKeyDictionary[type, frozenset[str]] = weakref.WeakKeyDictionary()
+def hidden_column(*args: Any, **kwargs: Any) -> Any:
+    """A ``mapped_column`` that ``to_dict()`` never serialises (never *read
+    out*). Same arguments as ``db.Column``::
+
+        internal_notes = hidden_column(db.Text)
+
+    Shorthand for ``info={"hidden": True}``, which also works on
+    ``db.Column``, ``mapped_column`` and ``db.relationship``.
+    """
+    return _flagged_column(("hidden",), args, kwargs)
 
 
-def _hidden_keys(cls: type) -> frozenset[str]:
-    """Attribute names on ``cls`` marked ``info={"hidden": True}``."""
-    keys = _hidden_cache.get(cls)
+def protected_column(*args: Any, **kwargs: Any) -> Any:
+    """A ``mapped_column`` that ``update()``/``create_or_abort()`` never set
+    from input (never *written in*). Same arguments as ``db.Column``::
+
+        is_admin = protected_column(db.Boolean, default=False)
+
+    Shorthand for ``info={"protected": True}``, which also works on
+    ``db.Column``, ``mapped_column`` and ``db.relationship``.
+    """
+    return _flagged_column(("protected",), args, kwargs)
+
+
+def secret_column(*args: Any, **kwargs: Any) -> Any:
+    """Hidden **and** protected: never read out, never written in. Use for
+    password hashes, API keys and tokens::
+
+        password_hash = secret_column(db.String(255), nullable=False)
+    """
+    return _flagged_column(("hidden", "protected"), args, kwargs)
+
+
+_flag_cache: weakref.WeakKeyDictionary[type, dict[str, frozenset[str]]] = weakref.WeakKeyDictionary()
+
+
+def _flagged_keys(cls: type, flag: str) -> frozenset[str]:
+    """Attribute names on ``cls`` whose column or relationship has
+    ``info={flag: True}``."""
+    per_cls = _flag_cache.setdefault(cls, {})
+    keys = per_cls.get(flag)
     if keys is None:
         mapper = sa.inspect(cls)
         found = set()
         for attr in mapper.column_attrs:
-            if attr.info.get("hidden") or any(c.info.get("hidden") for c in attr.columns):
+            if attr.info.get(flag) or any(c.info.get(flag) for c in attr.columns):
                 found.add(attr.key)
         for rel in mapper.relationships:
-            if rel.info.get("hidden"):
+            if rel.info.get(flag):
                 found.add(rel.key)
-        keys = _hidden_cache[cls] = frozenset(found)
+        keys = per_cls[flag] = frozenset(found)
     return keys
 
 
@@ -595,7 +636,7 @@ class SerializerMixin:
                 Decimals to ``str`` and enums to their value, so the result
                 can go straight to ``jsonify``.
         """
-        skip = set(exclude) | self.__hidden_fields__ | _hidden_keys(type(self))
+        skip = set(exclude) | self.__hidden_fields__ | _flagged_keys(type(self), "hidden")
         seen = set() if _seen is None else _seen
         seen.add(id(self))
         mapper = sa.inspect(type(self))

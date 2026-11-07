@@ -37,6 +37,8 @@ return jsonify(user.to_dict(json_safe=True))
 
 Hidden fields are **never** serialised: not at any depth, and not when the object appears inside another object's relationships. The value is still stored and readable on the object; it is only left out of `to_dict()`.
 
+> Hidden only stops data going **out**. It doesn't stop a client from *setting* the field through `update()` or `create_or_abort()`. For password hashes, API keys and tokens, use `secret_column(...)`, which is hidden **and** protected. See [Hidden vs protected fields](hidden-and-protected.md).
+
 Mark a column hidden where you declare it:
 
 ```python
@@ -44,8 +46,8 @@ from flask_modelkit import BaseModelMixin, hidden_column
 
 class User(BaseModelMixin, db.Model):
     name = db.Column(db.String(50))
-    password_hash = hidden_column(db.String(200))                 # shorthand
-    api_key = db.Column(db.String(64), info={"hidden": True})      # same thing
+    internal_notes = hidden_column(db.Text)                        # shorthand
+    review_score = db.Column(db.Integer, info={"hidden": True})    # same thing
     audit_log = db.relationship("AuditEntry", info={"hidden": True})
 ```
 
@@ -58,7 +60,7 @@ class User(BaseModelMixin, db.Model):
     __hidden_fields__ = frozenset({"updated_at"})
 ```
 
-Use hidden fields for secrets. Use `exclude=` for fields you don't need in one particular response.
+Use hidden fields for data the client must never see, and `secret_column` for secrets. Use `exclude=` for fields you don't need in one particular response.
 
 ## Relationships and cycles
 
