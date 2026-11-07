@@ -1,9 +1,11 @@
-# FlaskSQLAlchemyBaseModel
+# flask-modelkit
 
 [![Tests](https://github.com/AnozieChibuike/FlaskSQLAlchemyBaseModel/actions/workflows/tests.yml/badge.svg)](https://github.com/AnozieChibuike/FlaskSQLAlchemyBaseModel/actions/workflows/tests.yml)
-[![PyPI](https://img.shields.io/pypi/v/FlaskSQLAlchemyBaseModel)](https://pypi.org/project/FlaskSQLAlchemyBaseModel/)
+[![PyPI](https://img.shields.io/pypi/v/flask-modelkit)](https://pypi.org/project/flask-modelkit/)
 
 Composable model mixins for Flask-SQLAlchemy.
+
+> Formerly published as `FlaskSQLAlchemyBaseModel`. See [Migrating from FlaskSQLAlchemyBaseModel](#migrating-from-flasksqlalchemybasemodel).
 
 Most Flask projects end up writing the same base model: a UUID primary key, `created_at`/`updated_at`, `save()`, `to_dict()`, maybe soft delete. Each copy has its own subtle bugs. This package gives you those pieces as small mixins that you combine per model. The edge cases are handled and tested.
 
@@ -17,6 +19,7 @@ class Post(UUIDMixin, TimestampMixin, SoftDeleteMixin, CRUDMixin, SerializerMixi
 - **Pick what you need.** UUID or integer keys, timestamps, soft delete, CRUD helpers and serialisation are separate mixins. `BaseModelMixin` bundles the common set.
 - **Soft delete that actually hides rows.** Deleted rows are filtered out of *every* ORM query: helpers, `Model.query`, `db.select()`, `session.get()` and relationship loads.
 - **Safe updates.** `update(request.json)` only sets mapped columns and never touches `id`, timestamps or any field you protect.
+- **Create from request data in one line.** `create_or_abort(request.json)` drops unsafe keys, answers 400 naming every missing field, and 409 naming a duplicate unique field.
 - **Safe serialisation.** `to_dict()` never outputs hidden fields (such as password hashes), limits relationship depth, never loops on `back_populates`, and returns JSON-ready output on request.
 - **Efficient queries.** Counts and existence checks run in SQL. Pagination is stably ordered.
 - **Migration-friendly.** Defaults are generated in Python, so Flask-Migrate/Alembic produces clean migrations with no spurious diffs.
@@ -28,7 +31,7 @@ Requires Python 3.10+, Flask 3, Flask-SQLAlchemy 3.1+ and SQLAlchemy 2.0.16+.
 ## Install
 
 ```bash
-pip install FlaskSQLAlchemyBaseModel
+pip install flask-modelkit
 ```
 
 ## Quick start
@@ -36,28 +39,29 @@ pip install FlaskSQLAlchemyBaseModel
 ```python
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
-from flasksqlalchemybasemodel import BaseModelMixin
+from flask_modelkit import BaseModelMixin, hidden_column
 
 db = SQLAlchemy()
 
 
 class User(BaseModelMixin, db.Model):          # mixins go before db.Model
-    __hidden_fields__ = frozenset({"password_hash"})
-
     name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    password_hash = db.Column(db.String(200))
+    password_hash = hidden_column(db.String(200))   # never in to_dict()
 
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
 db.init_app(app)
 
+with app.app_context():
+    db.create_all()                             # or Flask-Migrate, see docs/migrations.md
+
 
 @app.post("/users")
 def create_user():
-    data = request.json
-    user = User.create(name=data["name"], email=data["email"])
+    # 400 if name/email are missing, 409 if the email is taken, unknown keys dropped
+    user = User.create_or_abort(request.get_json(silent=True))
     return jsonify(user.to_dict(json_safe=True)), 201
 
 
@@ -78,7 +82,7 @@ def list_users():
 Don't have a `db` yet? Use the bundled one:
 
 ```python
-from flasksqlalchemybasemodel import db, BaseModel
+from flask_modelkit import db, BaseModel
 
 class User(BaseModel):
     name = db.Column(db.String(50))
@@ -89,10 +93,30 @@ class User(BaseModel):
 | Guide | |
 |---|---|
 | [Mixins](docs/mixins.md) | Every mixin, how to combine them, and the one ordering rule |
-| [CRUD & queries](docs/crud-and-queries.md) | `create`, `save`, `update`, `get`, filters, counts, pagination, transactions |
+| [CRUD & queries](docs/crud-and-queries.md) | `create`, `create_or_abort`, `save`, `update`, `get`, filters, counts, pagination, transactions |
 | [Serialisation](docs/serialization.md) | `to_dict()`, hidden fields, depth, JSON output |
 | [Soft delete](docs/soft-delete.md) | How rows are hidden, including deleted rows, restoring |
 | [Migrations](docs/migrations.md) | Flask-Migrate/Alembic, adding mixins to existing tables |
+
+## Migrating from FlaskSQLAlchemyBaseModel
+
+`flask-modelkit` 1.0 continues `FlaskSQLAlchemyBaseModel` under a new name.
+
+```bash
+pip uninstall FlaskSQLAlchemyBaseModel
+pip install flask-modelkit
+```
+
+Then replace the import:
+
+```python
+# before
+from flasksqlalchemybasemodel import BaseModel, db
+# after
+from flask_modelkit import BaseModel, db
+```
+
+The old `flasksqlalchemybasemodel.src` module is gone; import from `flask_modelkit` directly. The columns the mixins create are unchanged, so no database migration is needed. See [CHANGELOG.md](CHANGELOG.md) for everything else that changed.
 
 ## Development
 

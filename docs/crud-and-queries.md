@@ -28,11 +28,54 @@ class User(BaseModelMixin, db.Model):
     __protected_fields__ = BaseModelMixin.__protected_fields__ | {"is_admin", "email_verified"}
 ```
 
-Protection only applies to `update()`. Plain assignment (`user.is_admin = True`) and `create(...)` still work for trusted code. Don't pass raw request data to `create(**request.json)`: name the fields you accept.
+Protection applies to `update()` and `create_or_abort()`. Plain assignment (`user.is_admin = True`) and `create(...)` still work for trusted code. Don't pass raw request data to `create(**request.json)`: use `create_or_abort(request.json)`.
+
+### Creating from request data: `create_or_abort()`
+
+`create_or_abort()` is `create()` for untrusted input. It validates, drops unsafe keys, and raises a JSON HTTP error instead of crashing:
+
+```python
+@app.post("/users")
+def register():
+    data = request.get_json(silent=True) or {}
+    pw = data.get("password")
+    user = User.create_or_abort(
+        data,
+        required=["password"],             # required input that isn't a column
+        password_hash=generate_password_hash(pw) if pw else None,
+    )
+    return jsonify(user.to_dict(json_safe=True)), 201
+```
+
+Most endpoints are a single line:
+
+```python
+post = Post.create_or_abort(request.get_json(silent=True), author=current_user)
+```
+
+What it does, in order:
+
+1. **Rejects a non-object body** with `InvalidBodyError` (400).
+2. **Drops keys** that aren't mapped attributes or are in `__protected_fields__`. Pass `fields=["title", "body"]` to accept only those.
+3. **Checks required fields.** Every `NOT NULL` column without a default is required. Passing a relationship (`author=...`) counts for its foreign-key column. `required=[...]` adds input names that aren't columns. `None` and blank strings count as missing. All missing fields are reported at once with `MissingFieldsError` (400).
+4. **Creates and commits.** If a unique value is taken, the session is rolled back and `DuplicateValueError` (409) names the field. Other integrity errors are re-raised so real bugs aren't hidden.
+
+Keyword arguments (`author=`, `password_hash=`) are trusted values: they override `data` and skip protection.
+
+Errors render as JSON without any setup:
+
+```json
+{"error": "missing_fields", "message": "Missing required field(s): name, email", "fields": ["name", "email"]}
+{"error": "duplicate", "message": "A User with this email already exists.", "fields": ["email"]}
+```
+
+They are ordinary Werkzeug `BadRequest`/`Conflict` subclasses, so an `@app.errorhandler(400)` you already have still receives them, with the field names on `e.fields`.
+
+`create_or_abort()` doesn't check value types or formats (for example, that `email` looks like an email). Use a schema library such as marshmallow or pydantic for that, and pass its output in.
 
 ### Transactions
 
-`create`, `save`, `update`, `delete`, `soft_delete` and `restore` all commit by default. Pass `commit=False` to group several changes into one transaction:
+`create`, `create_or_abort`, `save`, `update`, `delete`, `soft_delete` and `restore` all commit by default. Pass `commit=False` to group several changes into one transaction:
 
 ```python
 order = Order.create(user=user, commit=False)
@@ -40,6 +83,22 @@ for item in cart:
     OrderLine.create(order=order, product=item, commit=False)
 db.session.commit()          # all or nothing
 ```
+
+`create_or_abort(..., commit=False)` still flushes, so a duplicate value is reported straight away instead of at your final commit. The rollback that comes with a 409 discards every uncommitted change in the session, not only the new row.
+
+If a commit from `create`, `save` or `update` fails, for example on a unique constraint, the session is left in a failed state. Roll it back before using it again:
+
+```python
+from sqlalchemy.exc import IntegrityError
+
+try:
+    user.update({"email": new_email})
+except IntegrityError:
+    db.session.rollback()
+    abort(409)
+```
+
+`create_or_abort()` does this rollback for you.
 
 ## Reading
 

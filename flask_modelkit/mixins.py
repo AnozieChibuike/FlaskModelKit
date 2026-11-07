@@ -10,7 +10,10 @@ Mixins go *before* ``db.Model`` in the class bases::
 from __future__ import annotations
 
 import enum
+import json
 import uuid
+import weakref
+from collections.abc import Mapping
 from datetime import date, datetime, time, timezone
 from decimal import Decimal
 from typing import Any, ClassVar, Iterable, NoReturn, TypedDict, TypeVar
@@ -19,6 +22,7 @@ import sqlalchemy as sa
 from flask import abort
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import event
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import (
     Mapped,
     ORMExecuteState,
@@ -26,6 +30,7 @@ from sqlalchemy.orm import (
     mapped_column,
     with_loader_criteria,
 )
+from werkzeug.exceptions import BadRequest, Conflict
 
 __all__ = [
     "UUIDMixin",
@@ -36,6 +41,10 @@ __all__ = [
     "SerializerMixin",
     "BaseModelMixin",
     "PaginationReturn",
+    "InvalidBodyError",
+    "MissingFieldsError",
+    "DuplicateValueError",
+    "hidden_column",
     "utcnow",
 ]
 
@@ -181,6 +190,80 @@ def _hide_soft_deleted(state: ORMExecuteState) -> None:
 # ---------------------------------------------------------------------------
 
 
+class _JSONHTTPError:
+    """Renders a Werkzeug HTTP error as a JSON body:
+    ``{"error": ..., "message": ..., "fields": [...]}``."""
+
+    error: ClassVar[str] = "error"
+    fields: list[str]
+    description: str | None
+
+    def get_body(self, environ: Any = None, scope: Any = None) -> str:
+        return json.dumps(
+            {"error": self.error, "message": self.description, "fields": self.fields}
+        )
+
+    def get_headers(self, environ: Any = None, scope: Any = None) -> list[tuple[str, str]]:
+        return [("Content-Type", "application/json")]
+
+
+class InvalidBodyError(_JSONHTTPError, BadRequest):
+    """400: the input was not a JSON object (dict)."""
+
+    error = "invalid_body"
+
+    def __init__(self) -> None:
+        self.fields = []
+        super().__init__(description="Request body must be a JSON object.")
+
+
+class MissingFieldsError(_JSONHTTPError, BadRequest):
+    """400: required fields were missing or blank. ``.fields`` lists them."""
+
+    error = "missing_fields"
+
+    def __init__(self, fields: Iterable[str]) -> None:
+        self.fields = list(fields)
+        super().__init__(description="Missing required field(s): " + ", ".join(self.fields))
+
+
+class DuplicateValueError(_JSONHTTPError, Conflict):
+    """409: a unique field's value is already taken. ``.fields`` lists them."""
+
+    error = "duplicate"
+
+    def __init__(self, model: str, fields: Iterable[str]) -> None:
+        self.fields = list(fields)
+        super().__init__(
+            description=f"A {model} with this {', '.join(self.fields)} already exists."
+        )
+
+
+def _blank(value: Any) -> bool:
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
+_required_cache: weakref.WeakKeyDictionary[type, tuple[str, ...]] = weakref.WeakKeyDictionary()
+
+
+def _required_columns(cls: type) -> tuple[str, ...]:
+    """Attribute keys of NOT NULL columns with no default, in declaration order."""
+    keys = _required_cache.get(cls)
+    if keys is None:
+        found = []
+        for attr in sa.inspect(cls).column_attrs:
+            col = attr.columns[0]
+            if not isinstance(col, sa.Column) or col.nullable:
+                continue
+            if col.default is not None or col.server_default is not None:
+                continue
+            if col.table is not None and col is col.table.autoincrement_column:
+                continue
+            found.append(attr.key)
+        keys = _required_cache[cls] = tuple(found)
+    return keys
+
+
 class PaginationReturn(TypedDict):
     items: list[Any]
     total: int
@@ -214,7 +297,7 @@ class CRUDMixin(_SessionMixin):
         Unknown keys and ``__protected_fields__`` are ignored, so request
         JSON can be passed straight in.
         """
-        allowed = set(sa.inspect(type(self)).attrs.keys()) - self.__protected_fields__
+        allowed = self._writable_fields()
         for key, value in updates.items():
             if key in allowed:
                 setattr(self, key, value)
@@ -248,6 +331,119 @@ class CRUDMixin(_SessionMixin):
         obj = cls(**kwargs)
         obj.save(commit=commit)
         return obj
+
+    @classmethod
+    def _writable_fields(cls) -> set[str]:
+        """Mapped columns/relationships that untrusted input may set."""
+        return set(sa.inspect(cls).attrs.keys()) - cls.__protected_fields__
+
+    @classmethod
+    def create_or_abort(
+        cls: type[T],
+        data: Mapping[str, Any] | None,
+        *,
+        fields: Iterable[str] | None = None,
+        required: Iterable[str] = (),
+        commit: bool = True,
+        **values: Any,
+    ) -> T:
+        """Create from untrusted input (e.g. ``request.json``) or raise a
+        JSON HTTP error.
+
+        - Keys that aren't mapped attributes, or are in ``__protected_fields__``,
+          are dropped. ``fields`` narrows what's accepted to an allowlist.
+        - ``values`` are trusted keyword arguments (e.g. ``author=current_user``,
+          a password hash). They override ``data`` and skip protection.
+        - NOT NULL columns without a default are required. Passing a
+          relationship (``author=...``) satisfies its foreign-key column.
+          ``required`` adds names that must be present in ``data`` even if
+          they aren't columns (e.g. ``"password"``). ``None`` and blank
+          strings count as missing.
+
+        Raises:
+            InvalidBodyError: 400, ``data`` is not a mapping.
+            MissingFieldsError: 400, listing every missing field.
+            DuplicateValueError: 409, a unique value is taken. The session is
+                rolled back (including other uncommitted changes).
+
+        Other ``IntegrityError``s are re-raised after rolling back, so
+        genuine bugs aren't hidden behind a 409.
+        """
+        if data is None:
+            data = {}
+        if not isinstance(data, Mapping):
+            raise InvalidBodyError()
+
+        accepted = cls._writable_fields()  # type: ignore[attr-defined]
+        if fields is not None:
+            accepted &= set(fields)
+        accepted -= values.keys()
+        clean = {k: v for k, v in data.items() if k in accepted}
+        kwargs = {**clean, **values}
+
+        mapper = sa.inspect(cls)
+        satisfied = {k for k, v in kwargs.items() if not _blank(v)}
+        for rel in mapper.relationships:
+            if rel.key in satisfied:
+                for col in rel.local_columns:
+                    satisfied.add(mapper.get_property_by_column(col).key)
+
+        missing = [k for k in _required_columns(cls) if k in accepted and k not in satisfied]
+        missing += [
+            k for k in required
+            if k not in values and _blank(data.get(k)) and k not in missing
+        ]
+        if missing:
+            raise MissingFieldsError(missing)
+
+        obj = cls(**kwargs)
+        session = cls._session()
+        session.add(obj)
+        try:
+            session.flush()
+            if commit:
+                session.commit()
+        except IntegrityError:
+            session.rollback()
+            taken = cls._taken_unique_fields(kwargs)  # type: ignore[attr-defined]
+            if taken:
+                raise DuplicateValueError(cls.__name__, taken) from None
+            raise
+        return obj
+
+    @classmethod
+    def _taken_unique_fields(cls, values: Mapping[str, Any]) -> list[str]:
+        """Which unique fields in ``values`` already exist in the table
+        (soft-deleted rows included, since constraints still see them)."""
+        mapper = sa.inspect(cls)
+        groups: list[list[Any]] = []
+        for table in mapper.tables:
+            groups.append(list(table.primary_key.columns))
+            for cons in table.constraints:
+                if isinstance(cons, sa.UniqueConstraint):
+                    groups.append(list(cons.columns))
+            for index in table.indexes:
+                if index.unique:
+                    groups.append(list(index.columns))
+
+        taken: list[str] = []
+        session = cls._session()
+        for cols in groups:
+            try:
+                keys = [mapper.get_property_by_column(c).key for c in cols]
+            except Exception:
+                continue
+            if not keys or any(k not in values or values[k] is None for k in keys):
+                continue
+            stmt = (
+                sa.select(cls)
+                .filter_by(**{k: values[k] for k in keys})
+                .limit(1)
+                .execution_options(include_deleted=True)
+            )
+            if session.scalars(stmt).first() is not None:
+                taken += [k for k in keys if k not in taken]
+        return taken
 
     @classmethod
     def all(cls: type[T]) -> list[T]:
@@ -337,10 +533,46 @@ def _json_safe(value: Any) -> Any:
     return value
 
 
+def hidden_column(*args: Any, **kwargs: Any) -> Any:
+    """A ``mapped_column`` that ``to_dict()`` never serialises.
+
+    Takes the same arguments as ``db.Column``/``mapped_column``::
+
+        password_hash = hidden_column(db.String(200))
+
+    Equivalent to passing ``info={"hidden": True}``, which also works on
+    ``db.Column``, ``mapped_column`` and ``db.relationship``.
+    """
+    info = dict(kwargs.pop("info", None) or {})
+    info["hidden"] = True
+    return mapped_column(*args, info=info, **kwargs)
+
+
+_hidden_cache: weakref.WeakKeyDictionary[type, frozenset[str]] = weakref.WeakKeyDictionary()
+
+
+def _hidden_keys(cls: type) -> frozenset[str]:
+    """Attribute names on ``cls`` marked ``info={"hidden": True}``."""
+    keys = _hidden_cache.get(cls)
+    if keys is None:
+        mapper = sa.inspect(cls)
+        found = set()
+        for attr in mapper.column_attrs:
+            if attr.info.get("hidden") or any(c.info.get("hidden") for c in attr.columns):
+                found.add(attr.key)
+        for rel in mapper.relationships:
+            if rel.info.get("hidden"):
+                found.add(rel.key)
+        keys = _hidden_cache[cls] = frozenset(found)
+    return keys
+
+
 class SerializerMixin:
     """``to_dict()`` with hidden fields, depth control and cycle safety."""
 
     #: Never serialised, at any depth. Use for secrets such as password hashes.
+    #: Columns can instead be marked with ``hidden_column(...)`` or
+    #: ``info={"hidden": True}``; both mechanisms are combined.
     __hidden_fields__: ClassVar[frozenset[str]] = frozenset()
 
     def to_dict(
@@ -363,7 +595,7 @@ class SerializerMixin:
                 Decimals to ``str`` and enums to their value, so the result
                 can go straight to ``jsonify``.
         """
-        skip = set(exclude) | self.__hidden_fields__
+        skip = set(exclude) | self.__hidden_fields__ | _hidden_keys(type(self))
         seen = set() if _seen is None else _seen
         seen.add(id(self))
         mapper = sa.inspect(type(self))

@@ -3,7 +3,7 @@
 Every feature is a separate mixin. Combine the ones a model needs.
 
 ```python
-from flasksqlalchemybasemodel import (
+from flask_modelkit import (
     UUIDMixin, IntIdMixin, TimestampMixin, SoftDeleteMixin,
     CRUDMixin, SerializerMixin, BaseModelMixin,
 )
@@ -15,7 +15,7 @@ from flasksqlalchemybasemodel import (
 | `IntIdMixin` | `id`: auto-increment integer primary key, set by the database on insert |
 | `TimestampMixin` | `created_at`, `updated_at`: UTC timestamps |
 | `SoftDeleteMixin` | `deleted_at`, `soft_delete()`, `restore()`, `is_deleted`; hides deleted rows ([guide](soft-delete.md)) |
-| `CRUDMixin` | `create`, `save`, `update`, `delete`, `get`, filters, counts, `paginate` ([guide](crud-and-queries.md)) |
+| `CRUDMixin` | `create`, `create_or_abort`, `save`, `update`, `delete`, `get`, filters, counts, `paginate` ([guide](crud-and-queries.md)) |
 | `SerializerMixin` | `to_dict()` ([guide](serialization.md)) |
 | `BaseModelMixin` | `UUIDMixin` + `TimestampMixin` + `CRUDMixin` + `SerializerMixin` |
 
@@ -85,14 +85,14 @@ class Invoice(Model):
 | `updated_at` | `DateTime`, not null | UTC, naive. Refreshed on every UPDATE, including plain `db.session.commit()`. |
 | `deleted_at` | `DateTime`, nullable, indexed | `NULL` while the row is live. |
 
-Timestamps are stored as *naive* UTC datetimes, so they behave the same on SQLite, PostgreSQL and MySQL. Use `flasksqlalchemybasemodel.utcnow()` when comparing against them.
+Timestamps are stored as *naive* UTC datetimes, so they behave the same on SQLite, PostgreSQL and MySQL. Use `flask_modelkit.utcnow()` when comparing against them.
 
 ## Using the bundled `db`
 
 If your app doesn't have a `SQLAlchemy()` instance yet, the package provides one with a ready-made abstract `BaseModel` (equivalent to `BaseModelMixin`):
 
 ```python
-from flasksqlalchemybasemodel import db, BaseModel
+from flask_modelkit import db, BaseModel
 
 class User(BaseModel):
     name = db.Column(db.String(50))

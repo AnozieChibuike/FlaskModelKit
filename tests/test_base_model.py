@@ -3,7 +3,7 @@ import unittest
 from datetime import datetime
 from .app import create_app
 
-from flasksqlalchemybasemodel import db, BaseModel
+from flask_modelkit import db, BaseModel
 
 class TestModel(BaseModel):
     __test__ = False  # not a pytest test class

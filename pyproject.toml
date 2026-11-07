@@ -1,13 +1,13 @@
 [tool.poetry]
-name = "FlaskSQLAlchemyBaseModel"
-version = "2.0.0"
+name = "flask-modelkit"
+version = "1.0.0"
 description = "A reusable base model for Flask-SQLAlchemy: UUID primary keys, UTC timestamps, safe updates, cycle-safe serialisation and typed CRUD/query helpers."
 authors = ["AnozieChibuike <chibuikeanozie0@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/AnozieChibuike/FlaskSQLAlchemyBaseModel"
-repository = "https://github.com/AnozieChibuike/FlaskSQLAlchemyBaseModel"
-keywords = ["flask", "sqlalchemy", "orm", "base model", "mixin"]
+homepage = "https://github.com/AnozieChibuike/FlaskModelKit"
+repository = "https://github.com/AnozieChibuike/FlaskModelKit"
+keywords = ["flask", "sqlalchemy", "flask-sqlalchemy", "orm", "base model", "mixin", "soft delete", "uuid"]
 classifiers = [
     "Framework :: Flask",
     "Topic :: Database",
@@ -17,7 +17,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
-packages = [{ include = "flasksqlalchemybasemodel" }]
+packages = [{ include = "flask_modelkit" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"

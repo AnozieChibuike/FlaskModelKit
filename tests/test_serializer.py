@@ -2,7 +2,9 @@ from decimal import Decimal
 
 from flask import jsonify
 
-from .models import Account, Author, Book, Chapter
+from flask_modelkit import db
+
+from .models import Account, Author, Book, Chapter, Member, Note, Profile
 
 
 def _tree():
@@ -44,3 +46,20 @@ def test_json_safe(app):
     assert isinstance(data["created_at"], str)
     with app.test_request_context():
         jsonify(data)
+
+
+def test_column_level_hidden_fields(app):
+    m = Member.create(email="m@x.io", password_hash="h", api_key="k")
+    Note.create(body="n", member=m)
+    Profile.create(bio="b", token="t", member=m)
+    data = m.to_dict(depth=None, json_safe=True)
+    assert data["email"] == "m@x.io"
+    assert "password_hash" not in data          # hidden_column(...)
+    assert "api_key" not in data                # db.Column(info={"hidden": True})
+    assert "notes" not in data                  # relationship(info={"hidden": True})
+    assert data["profile"]["bio"] == "b"
+    assert "token" not in data["profile"]       # hidden in nested objects too
+    # Value is still stored and readable; it's only left out of to_dict().
+    assert db.session.get(Member, m.id).password_hash == "h"
+    # Extra info keys are kept alongside "hidden".
+    assert Profile.__table__.c.token.info == {"label": "x", "hidden": True}

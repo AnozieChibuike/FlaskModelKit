@@ -3,7 +3,7 @@ import sqlalchemy as sa
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 
-from flasksqlalchemybasemodel import db
+from flask_modelkit import db
 
 
 def _diff(engine, metadata):

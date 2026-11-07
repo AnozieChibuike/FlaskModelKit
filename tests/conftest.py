@@ -1,6 +1,6 @@
 import pytest
 
-from flasksqlalchemybasemodel import db
+from flask_modelkit import db
 
 from .app import create_app
 

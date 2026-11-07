@@ -1,5 +1,10 @@
 #!/bin/bash
-# Build and upload to PyPI. Run the test suite first.
+# Releases normally go through GitHub: bump the version in pyproject.toml,
+# then publish a GitHub release tagged v<version>. The "Publish to PyPI"
+# workflow tests, builds and uploads it with Trusted Publishing.
+#
+# This script is a manual fallback that needs a PyPI API token
+# (poetry config pypi-token.pypi <token>).
 set -euo pipefail
 pytest -q
 rm -rf dist

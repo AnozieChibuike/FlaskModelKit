@@ -53,6 +53,6 @@ post.restore()
 ## Things to know
 
 - **`update()` can't undo a deletion.** `deleted_at` is a protected field, so `post.update(request.json)` can never undelete a post.
-- **Unique constraints still see deleted rows.** If `email` is unique and a user is soft-deleted, a new user with the same email will fail. Use a partial unique index (`WHERE deleted_at IS NULL`) on PostgreSQL, or include `deleted_at` in the constraint.
+- **Unique constraints still see deleted rows.** If `email` is unique and a user is soft-deleted, a new user with the same email will fail. `create_or_abort()` reports this as a 409 on `email`, like any other duplicate. To let the email be reused, use a partial unique index (`WHERE deleted_at IS NULL`) on PostgreSQL, or include `deleted_at` in the constraint.
 - **Core SQL is not filtered.** Only ORM queries are filtered. Statements built on `Post.__table__` and raw `text()` SQL see all rows.
 - **Bulk operations.** `db.session.execute(update(Post)...)` and `delete(Post)` are not filtered. Add `.where(Post.deleted_at.is_(None))` yourself.

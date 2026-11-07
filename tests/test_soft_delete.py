@@ -1,4 +1,4 @@
-from flasksqlalchemybasemodel import db
+from flask_modelkit import db
 
 from .models import Comment, Post
 

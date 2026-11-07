@@ -1,6 +1,6 @@
 from flask import Flask
 
-from flasksqlalchemybasemodel import db
+from flask_modelkit import db
 
 
 class TestConfig:

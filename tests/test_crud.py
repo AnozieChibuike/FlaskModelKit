@@ -3,7 +3,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.exceptions import NotFound
 
-from flasksqlalchemybasemodel import BaseModelMixin, CRUDMixin, db
+from flask_modelkit import BaseModelMixin, CRUDMixin, db
 
 from .models import Account, Author, Counter
 
