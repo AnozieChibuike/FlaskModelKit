@@ -1,9 +1,19 @@
 # flask-modelkit
 
-[![Tests](https://github.com/AnozieChibuike/FlaskSQLAlchemyBaseModel/actions/workflows/tests.yml/badge.svg)](https://github.com/AnozieChibuike/FlaskSQLAlchemyBaseModel/actions/workflows/tests.yml)
+[![Tests](https://github.com/AnozieChibuike/FlaskModelKit/actions/workflows/tests.yml/badge.svg)](https://github.com/AnozieChibuike/FlaskModelKit/actions/workflows/tests.yml)
 [![PyPI](https://img.shields.io/pypi/v/flask-modelkit)](https://pypi.org/project/flask-modelkit/)
+[![Docs](https://img.shields.io/badge/docs-flask--modelkit-A84E08)](https://anoziechibuike.github.io/FlaskModelKit/)
+[![Python](https://img.shields.io/pypi/pyversions/flask-modelkit)](https://pypi.org/project/flask-modelkit/)
+[![Downloads/month](https://img.shields.io/pypi/dm/flask-modelkit)](https://pypistats.org/packages/flask-modelkit)
+[![Total downloads](https://img.shields.io/pepy/dt/flask-modelkit)](https://pepy.tech/projects/flask-modelkit)
+[![GitHub stars](https://img.shields.io/github/stars/AnozieChibuike/FlaskModelKit?style=flat&logo=github)](https://github.com/AnozieChibuike/FlaskModelKit/stargazers)
+[![License: MIT](https://img.shields.io/github/license/AnozieChibuike/FlaskModelKit)](https://github.com/AnozieChibuike/FlaskModelKit/blob/master/LICENSE)
 
 Composable model mixins for Flask-SQLAlchemy.
+
+**Documentation: [anoziechibuike.github.io/FlaskModelKit](https://anoziechibuike.github.io/FlaskModelKit/)**
+
+⭐ If flask-modelkit saves you from writing another base model, [star it on GitHub](https://github.com/AnozieChibuike/FlaskModelKit). It helps other Flask developers find it.
 
 > Formerly published as `FlaskSQLAlchemyBaseModel`. See [Migrating from FlaskSQLAlchemyBaseModel](#migrating-from-flasksqlalchemybasemodel).
 
@@ -57,7 +67,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
 db.init_app(app)
 
 with app.app_context():
-    db.create_all()                             # or Flask-Migrate, see docs/migrations.md
+    db.create_all()                             # or Flask-Migrate, see https://anoziechibuike.github.io/FlaskModelKit/#migrations
 
 
 @app.post("/users")
@@ -92,14 +102,45 @@ class User(BaseModel):
 
 ## Documentation
 
+The full documentation is at **[anoziechibuike.github.io/FlaskModelKit](https://anoziechibuike.github.io/FlaskModelKit/)**.
+
 | Guide | |
 |---|---|
-| [Mixins](docs/mixins.md) | Every mixin, how to combine them, and the one ordering rule |
-| [CRUD & queries](docs/crud-and-queries.md) | `create`, `create_or_abort`, `save`, `update`, `get`, filters, counts, pagination, transactions |
-| [Hidden vs protected](docs/hidden-and-protected.md) | Controlling what goes out to and comes in from the client |
-| [Serialisation](docs/serialization.md) | `to_dict()`, hidden fields, depth, JSON output |
-| [Soft delete](docs/soft-delete.md) | How rows are hidden, including deleted rows, restoring |
-| [Migrations](docs/migrations.md) | Flask-Migrate/Alembic, adding mixins to existing tables |
+| [Quick start](https://anoziechibuike.github.io/FlaskModelKit/#quick-start) | A complete app in four steps |
+| [Mixins](https://anoziechibuike.github.io/FlaskModelKit/#mixins) | Every mixin, an interactive builder, and the one ordering rule |
+| [Creating & updating](https://anoziechibuike.github.io/FlaskModelKit/#writing) | `create`, `create_or_abort`, `save`, `update`, transactions |
+| [Reading & filtering](https://anoziechibuike.github.io/FlaskModelKit/#reading) | `get`, filters, counts, pagination, custom queries |
+| [Hidden vs protected](https://anoziechibuike.github.io/FlaskModelKit/#hidden-vs-protected) | Controlling what goes out to and comes in from the client |
+| [Serialisation](https://anoziechibuike.github.io/FlaskModelKit/#serialization) | `to_dict()`, depth, JSON output |
+| [Soft delete](https://anoziechibuike.github.io/FlaskModelKit/#soft-delete) | How rows are hidden, including deleted rows, restoring |
+| [Migrations](https://anoziechibuike.github.io/FlaskModelKit/#migrations) | Flask-Migrate/Alembic, adding mixins to existing tables |
+| [Project examples](https://anoziechibuike.github.io/FlaskModelKit/#example-blog) | A blog API, a shop checkout, lookup tables |
+| [API reference](https://anoziechibuike.github.io/FlaskModelKit/#api-reference) | Every public name |
+
+## Use with AI agents
+
+AI coding assistants don't know this package's rules: mixins before `db.Model`, `create_or_abort()` for request data, `secret_column()` for password hashes. [`AGENT.md`](https://anoziechibuike.github.io/FlaskModelKit/AGENT.md) spells them out. Add it to your project once, from the project root:
+
+```bash
+# Claude Code: save it, then import it from CLAUDE.md
+mkdir -p .claude && curl -fsSL https://anoziechibuike.github.io/FlaskModelKit/AGENT.md -o .claude/flask-modelkit.md
+echo "@.claude/flask-modelkit.md" >> CLAUDE.md
+
+# Cursor: a project rule attached to Python files
+mkdir -p .cursor/rules
+{ printf -- '---\ndescription: How to use flask-modelkit models, fields and endpoints\nglobs: **/*.py\nalwaysApply: false\n---\n\n'
+  curl -fsSL https://anoziechibuike.github.io/FlaskModelKit/AGENT.md; } > .cursor/rules/flask-modelkit.mdc
+
+# GitHub Copilot: path-specific instructions for Python files
+mkdir -p .github/instructions
+{ printf -- '---\napplyTo: "**/*.py"\n---\n\n'
+  curl -fsSL https://anoziechibuike.github.io/FlaskModelKit/AGENT.md; } > .github/instructions/flask-modelkit.instructions.md
+
+# Codex, Jules, Amp, Zed and other AGENTS.md readers (Gemini CLI: GEMINI.md)
+curl -fsSL https://anoziechibuike.github.io/FlaskModelKit/AGENT.md >> AGENTS.md
+```
+
+In a chat assistant, say: *"Read https://anoziechibuike.github.io/FlaskModelKit/AGENT.md and follow it for all flask-modelkit code."* To pin the rules to your installed version, download from the release tag instead, for example `https://raw.githubusercontent.com/AnozieChibuike/FlaskModelKit/v1.0.0/AGENT.md`. See [Use with AI agents](https://anoziechibuike.github.io/FlaskModelKit/#ai-agents) for details.
 
 ## Migrating from FlaskSQLAlchemyBaseModel
 
@@ -129,6 +170,17 @@ pytest
 ```
 
 CI runs the suite on Python 3.10–3.13 and against the minimum supported dependency versions.
+
+## Star history
+
+<a href="https://star-history.com/#AnozieChibuike/FlaskModelKit&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=AnozieChibuike/FlaskModelKit&type=Date&theme=dark">
+    <img alt="flask-modelkit star history" src="https://api.star-history.com/svg?repos=AnozieChibuike/FlaskModelKit&type=Date" width="600">
+  </picture>
+</a>
+
+More numbers, including downloads, live on the [Community & stats](https://anoziechibuike.github.io/FlaskModelKit/#community) page.
 
 ## License
 

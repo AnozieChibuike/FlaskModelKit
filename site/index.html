@@ -1,0 +1,2477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Composable model mixins for Flask-SQLAlchemy: UUID keys, UTC timestamps, soft delete, safe updates from request data, hidden and protected fields, and typed CRUD helpers.">
+<meta name="theme-color" content="#F5F6F8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1218" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://anoziechibuike.github.io/FlaskModelKit/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="flask-modelkit">
+<meta property="og:description" content="Composable model mixins for Flask-SQLAlchemy: UUID keys, UTC timestamps, soft delete, safe updates from request data, hidden and protected fields, and typed CRUD helpers.">
+<meta property="og:url" content="https://anoziechibuike.github.io/FlaskModelKit/">
+<meta name="twitter:card" content="summary">
+<style>[hidden]:not([hidden=until-found i]){display:none!important} img{max-width:100%} body{margin:0}</style>
+<title>flask-modelkit · Model mixins for Flask-SQLAlchemy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky top bar · left nav rail of grouped sections · one reading column (~72ch) with API entries as labelled signature blocks. */
+:root {
+  --bg: #F5F6F8;
+  --surface: #FFFFFF;
+  --surface-2: #EDF0F4;
+  --ink: #161A22;
+  --muted: #586174;
+  --line: #DCE0E7;
+  --accent: #A84E08;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #FBECDD;
+  --code-bg: #F0F2F6;
+  --code-ink: #1F2533;
+  --note: #2557C7;
+  --note-soft: #E5EDFC;
+  --danger: #B42335;
+  --danger-soft: #FBE7EA;
+  --ok: #1D7A4B;
+  --ok-soft: #E2F3EA;
+  --tk-keyword: #A1309A;
+  --tk-string: #1D7A4B;
+  --tk-comment: #7A8395;
+  --tk-func: #2557C7;
+  --tk-number: #A84E08;
+  --tk-class: #8A5A00;
+  --tk-deco: #B42335;
+  --shadow: 0 1px 2px rgba(22,26,34,.06), 0 8px 24px rgba(22,26,34,.06);
+
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Instrument Sans", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --topbar-h: 60px;
+  --nav-w: 268px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1218; --surface: #151922; --surface-2: #1B2029; --ink: #E6E9EF; --muted: #99A2B3;
+    --line: #262C38; --accent: #F2A65A; --accent-ink: #1A1206; --accent-soft: #33240F;
+    --code-bg: #12161E; --code-ink: #D9DEE7; --note: #7DA6FF; --note-soft: #172238;
+    --danger: #FF8A98; --danger-soft: #3A1820; --ok: #6FD49E; --ok-soft: #13291E;
+    --tk-keyword: #E19BF0; --tk-string: #8FD9A8; --tk-comment: #6E7789; --tk-func: #8DB4FF;
+    --tk-number: #F2A65A; --tk-class: #F0C674; --tk-deco: #FF9DA8;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1218; --surface: #151922; --surface-2: #1B2029; --ink: #E6E9EF; --muted: #99A2B3;
+  --line: #262C38; --accent: #F2A65A; --accent-ink: #1A1206; --accent-soft: #33240F;
+  --code-bg: #12161E; --code-ink: #D9DEE7; --note: #7DA6FF; --note-soft: #172238;
+  --danger: #FF8A98; --danger-soft: #3A1820; --ok: #6FD49E; --ok-soft: #13291E;
+  --tk-keyword: #E19BF0; --tk-string: #8FD9A8; --tk-comment: #6E7789; --tk-func: #8DB4FF;
+  --tk-number: #F2A65A; --tk-class: #F0C674; --tk-deco: #FF9DA8;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-padding-top: calc(var(--topbar-h) + 20px + env(safe-area-inset-top, 0px)); }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 10; background: var(--surface);
+}
+a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+::selection { background: var(--accent-soft); }
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  height: var(--topbar-h); background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--line);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; align-items: center; gap: 16px;
+}
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); min-width: 0; }
+.brand-mark {
+  width: 30px; height: 30px; border-radius: 7px; flex: none;
+  background: var(--ink); color: var(--bg); display: grid; place-items: center;
+}
+.brand-mark svg { width: 18px; height: 18px; }
+.brand-name { font-family: var(--font-display); font-weight: 700; font-size: 17px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-ver { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.topbar-spacer { flex: 1; }
+.search { position: relative; width: min(340px, 40vw); }
+.search input {
+  width: 100%; height: 38px; border-radius: 9px; border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--ink); font: inherit; font-size: 14.5px;
+  padding: 0 40px 0 36px;
+}
+.search input::placeholder { color: var(--muted); }
+.search input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+.search .ico { position: absolute; left: 11px; top: 11px; width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
+.search kbd { position: absolute; right: 9px; top: 8px; }
+kbd {
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--muted);
+  border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 6px; background: var(--surface);
+}
+.results {
+  position: absolute; top: 44px; left: 0; right: 0; max-height: 60vh; overflow: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);
+  padding: 6px; list-style: none; margin: 0;
+}
+.results a { display: block; padding: 8px 10px; border-radius: 7px; color: var(--ink); text-decoration: none; }
+.results a small { display: block; color: var(--muted); font-size: 12.5px; }
+.results a:hover, .results a.sel { background: var(--accent-soft); }
+.results .empty { padding: 10px; color: var(--muted); font-size: 14px; }
+.icon-btn {
+  width: 38px; height: 38px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink); display: grid; place-items: center; cursor: pointer; flex: none;
+}
+.icon-btn:hover { border-color: var(--muted); }
+.icon-btn svg { width: 18px; height: 18px; }
+.menu-btn { display: none; }
+.gh-link { display: flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; font-size: 14px; white-space: nowrap; }
+.gh-link:hover { color: var(--ink); }
+
+/* ---------- shell ---------- */
+.shell {
+  display: grid; grid-template-columns: var(--nav-w) minmax(0, 1fr); max-width: 1240px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  gap: 48px;
+}
+.nav-panel {
+  position: sticky; top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
+  height: calc(100vh - var(--topbar-h) - env(safe-area-inset-top, 0px));
+  overflow-y: auto; padding-block: 28px 40px; overscroll-behavior: contain;
+}
+.nav-group + .nav-group { margin-top: 22px; }
+.nav-title {
+  font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--muted); margin: 0 0 8px 10px;
+}
+.nav-panel ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.nav-panel a {
+  display: block; padding: 5px 10px; border-radius: 7px; color: var(--ink); text-decoration: none;
+  font-size: 14.5px; line-height: 1.45; opacity: .82;
+}
+.nav-panel a code { font-size: 13px; }
+.nav-panel a:hover { background: var(--surface-2); opacity: 1; }
+.nav-panel a.active { background: var(--accent-soft); color: var(--accent); opacity: 1; font-weight: 600; }
+
+main { min-width: 0; padding-block: 36px 120px; max-width: 800px; }
+
+/* ---------- type ---------- */
+h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -.015em; text-wrap: balance; line-height: 1.2; margin: 0; }
+h1 { font-size: clamp(34px, 5vw, 48px); font-weight: 700; letter-spacing: -.03em; }
+h2 { font-size: 30px; font-weight: 700; }
+h3 { font-size: 21px; font-weight: 600; }
+h4 { font-size: 16.5px; font-weight: 600; font-family: var(--font-body); letter-spacing: 0; }
+p, ul, ol { margin: 0; }
+.prose { display: grid; gap: 16px; }
+.prose > ul, .prose > ol { padding-left: 22px; display: grid; gap: 6px; }
+.lead { font-size: 19px; color: var(--muted); max-width: 62ch; }
+.muted { color: var(--muted); }
+code {
+  font-family: var(--font-mono); font-size: .87em; background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 5px; padding: .05em .35em; overflow-wrap: anywhere;
+}
+a code { color: inherit; }
+.eyebrow {
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--accent);
+}
+
+section.doc { display: grid; gap: 18px; padding-top: 56px; margin-top: 56px; border-top: 1px solid var(--line); }
+section.doc:first-of-type { border-top: 0; margin-top: 0; padding-top: 8px; }
+.sub { display: grid; gap: 16px; margin-top: 20px; }
+.anchor { color: inherit; text-decoration: none; }
+.anchor:hover::after { content: " #"; color: var(--muted); font-weight: 400; }
+
+/* ---------- hero ---------- */
+.hero { display: grid; gap: 20px; padding-bottom: 8px; }
+.hero h1 span { color: var(--accent); }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 18px; border-radius: 10px;
+  font-weight: 600; font-size: 15px; text-decoration: none; border: 1px solid var(--line); color: var(--ink); background: var(--surface);
+}
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn:hover { text-decoration: none; filter: brightness(1.05); }
+.install-pill {
+  display: inline-flex; align-items: center; gap: 10px; height: 42px; padding: 0 6px 0 14px; border-radius: 10px;
+  font-family: var(--font-mono); font-size: 14px; background: var(--code-bg); border: 1px solid var(--line); min-width: 0; max-width: 100%;
+}
+.install-pill span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.install-pill .copy { position: static; opacity: 1; }
+.req { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font-size: 13px; font-family: var(--font-mono); padding: 3px 10px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--muted);
+}
+
+.features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.feature { background: var(--surface); padding: 18px 20px; display: grid; gap: 6px; align-content: start; }
+.feature h4 { font-size: 15.5px; }
+.feature p { font-size: 14.5px; color: var(--muted); }
+
+/* ---------- code ---------- */
+.code {
+  position: relative; background: var(--code-bg); border: 1px solid var(--line); border-radius: 11px; min-width: 0;
+}
+.code-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 7px 8px 7px 14px; border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+}
+.code pre { margin: 0; padding: 14px 16px; overflow-x: auto; font-family: var(--font-mono); font-size: 13.5px; line-height: 1.65; color: var(--code-ink); tab-size: 4; }
+.code pre code { background: none; border: 0; padding: 0; font-size: inherit; overflow-wrap: normal; white-space: pre; }
+.copy {
+  font: 500 12px var(--font-body); color: var(--muted); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 6px; padding: 3px 9px; cursor: pointer;
+}
+.code:not(:has(.code-head)) .copy { position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity .15s; }
+.code:hover .copy, .copy:focus-visible { opacity: 1; }
+.copy:hover { color: var(--ink); }
+.copy.done { color: var(--ok); border-color: var(--ok); }
+.token.comment, .token.prolog { color: var(--tk-comment); font-style: italic; }
+.token.keyword, .token.boolean, .token.important { color: var(--tk-keyword); }
+.token.string, .token.triple-quoted-string, .token.char { color: var(--tk-string); }
+.token.function { color: var(--tk-func); }
+.token.number { color: var(--tk-number); }
+.token.class-name, .token.builtin { color: var(--tk-class); }
+.token.decorator, .token.annotation { color: var(--tk-deco); }
+.token.operator, .token.punctuation { color: var(--muted); }
+
+.tabs { display: flex; gap: 2px; padding: 6px 6px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button {
+  font: 500 12.5px var(--font-mono); color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent;
+  padding: 6px 10px 8px; cursor: pointer; white-space: nowrap;
+}
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.code .tabpanel .copy { position: absolute; top: 50px; right: 8px; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; background: var(--surface-2); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td code { white-space: nowrap; }
+td.wrap code { white-space: normal; }
+
+/* ---------- callouts ---------- */
+.callout { border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; font-size: 15px; border: 1px solid; }
+.callout strong.t { font-size: 12px; text-transform: uppercase; letter-spacing: .09em; }
+.callout.note { background: var(--note-soft); border-color: color-mix(in srgb, var(--note) 30%, transparent); }
+.callout.note strong.t { color: var(--note); }
+.callout.danger { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 30%, transparent); }
+.callout.danger strong.t { color: var(--danger); }
+.callout.tip { background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 30%, transparent); }
+.callout.tip strong.t { color: var(--ok); }
+.callout code { background: color-mix(in srgb, var(--surface) 60%, transparent); }
+
+/* ---------- API entries ---------- */
+.api { border: 1px solid var(--line); border-radius: 11px; background: var(--surface); overflow: hidden; }
+.api-sig {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 10px; padding: 12px 16px;
+  background: var(--surface-2); border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono); font-size: 14px; overflow-wrap: anywhere;
+}
+.api-sig .name { font-weight: 500; color: var(--ink); }
+.api-sig .ret { color: var(--muted); }
+.kind {
+  font: 600 10.5px var(--font-body); text-transform: uppercase; letter-spacing: .08em; padding: 2px 7px;
+  border-radius: 5px; background: var(--accent-soft); color: var(--accent); flex: none; align-self: center;
+}
+.kind.col { background: var(--note-soft); color: var(--note); }
+.kind.attr { background: var(--ok-soft); color: var(--ok); }
+.api-body { padding: 14px 16px; display: grid; gap: 12px; font-size: 15px; }
+.api-body .code { margin: 0; }
+.params { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; font-size: 14.5px; }
+.params dt { font-family: var(--font-mono); font-size: 13px; padding-top: 2px; }
+.params dd { margin: 0; color: var(--muted); }
+
+/* ---------- schema card ---------- */
+.schema { border: 1px solid var(--line); border-radius: 11px; background: var(--surface); overflow: hidden; font-family: var(--font-mono); font-size: 13.5px; }
+.schema-head { padding: 9px 14px; background: var(--ink); color: var(--bg); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.schema-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.2fr); gap: 10px; padding: 8px 14px; border-top: 1px solid var(--line); align-items: baseline; }
+.schema-row:first-of-type { border-top: 0; }
+.schema-row .src { color: var(--muted); font-family: var(--font-body); font-size: 12.5px; }
+.schema-row .pk { color: var(--accent); font-weight: 500; }
+.schema-row.own { background: var(--surface-2); }
+
+/* ---------- builder ---------- */
+.builder { border: 1px solid var(--line); border-radius: 13px; background: var(--surface); box-shadow: var(--shadow); display: grid; grid-template-columns: 250px minmax(0, 1fr); overflow: hidden; }
+.builder-controls { padding: 18px; border-right: 1px solid var(--line); display: grid; gap: 16px; align-content: start; }
+.builder-controls fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; }
+.builder-controls legend { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin-bottom: 6px; padding: 0; }
+.opt { display: flex; gap: 10px; align-items: flex-start; padding: 7px 9px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+.opt:hover { background: var(--surface-2); }
+.opt:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: var(--accent-soft); }
+.opt input { accent-color: var(--accent); margin-top: 4px; flex: none; }
+.opt span { display: grid; font-size: 14px; line-height: 1.35; }
+.opt small { color: var(--muted); font-size: 12.5px; }
+.opt span > code { justify-self: start; }
+.builder-out { padding: 18px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.builder-out h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
+.method-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.method-chips code { font-size: 12.5px; }
+.method-chips .none { color: var(--muted); font-size: 14px; }
+
+/* ---------- steps (real sequences only) ---------- */
+.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 0; counter-reset: s; }
+.steps > li { counter-increment: s; position: relative; padding: 0 0 26px 46px; display: grid; gap: 10px; min-width: 0; }
+.steps > li::before {
+  content: counter(s); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center; font: 600 13px var(--font-mono); background: var(--surface); border: 1px solid var(--line); color: var(--accent);
+}
+.steps > li::after { content: ""; position: absolute; left: 14px; top: 32px; bottom: 4px; width: 1px; background: var(--line); }
+.steps > li:last-child::after { display: none; }
+.steps h4 { padding-top: 3px; }
+
+.pager { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 64px; }
+.pager a { border: 1px solid var(--line); border-radius: 11px; padding: 14px 16px; text-decoration: none; color: var(--ink); background: var(--surface); display: grid; gap: 2px; }
+.pager a small { color: var(--muted); font-size: 12.5px; }
+.pager a:hover { border-color: var(--accent); }
+footer.foot { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+
+.scrim { display: none; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 960px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .menu-btn { display: grid; }
+  .gh-link .gh-label { display: none; }
+  .nav-panel {
+    position: fixed; z-index: 30; left: 0; top: 0; bottom: 0; height: auto; width: min(300px, 86vw);
+    background: var(--surface); border-right: 1px solid var(--line); box-shadow: var(--shadow);
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 14px calc(30px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+    transform: translateX(-105%); transition: transform .22s ease; visibility: hidden;
+  }
+  body.nav-open .nav-panel { transform: none; visibility: visible; }
+  body.nav-open .scrim { display: block; position: fixed; inset: 0; z-index: 25; background: rgba(10,12,16,.45); }
+  main { padding-top: 24px; }
+}
+@media (max-width: 720px) {
+  .features { grid-template-columns: minmax(0, 1fr); }
+  .builder { grid-template-columns: minmax(0, 1fr); }
+  .builder-controls { border-right: 0; border-bottom: 1px solid var(--line); }
+  .search { width: auto; flex: 1; min-width: 0; }
+  .search kbd { display: none; }
+  .search input { padding-right: 10px; }
+  .topbar-spacer, .brand-ver, .brand-name { display: none; }
+  .pager { grid-template-columns: minmax(0, 1fr); }
+  .schema-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .schema-row .src { grid-column: 1 / -1; }
+  h2 { font-size: 26px; }
+  .params { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .params dd { margin-bottom: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .nav-panel { transition: none; } }
+
+/* ---------- star button & stats ---------- */
+.gh-link { border: 1px solid var(--line); border-radius: 9px; height: 38px; padding: 0 10px; background: var(--surface); color: var(--ink); }
+.gh-link:hover { border-color: var(--muted); }
+.gh-link svg.star { width: 15px; height: 15px; color: #E3A008; }
+.gh-count { font: 500 12.5px var(--font-mono); color: var(--muted); border-left: 1px solid var(--line); padding-left: 8px; margin-left: 2px; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.stats.wide { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.stat { display: grid; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); color: var(--ink); text-decoration: none; min-width: 0; }
+a.stat:hover { border-color: var(--accent); text-decoration: none; }
+.stat .num { font: 700 24px/1.15 var(--font-display); letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.stat .lbl { font-size: 13px; color: var(--muted); }
+.stat .sub { font-size: 12px; color: var(--muted); }
+.stats-note { font-size: 13px; color: var(--muted); }
+.chart-card { border: 1px solid var(--line); border-radius: 13px; background: var(--surface); padding: 12px; }
+.chart-card img { display: block; width: 100%; height: auto; border-radius: 8px; }
+.cta-row { display: flex; flex-wrap: wrap; gap: 10px; }
+@media (max-width: 720px) {
+  .stats, .stats.wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gh-link .gh-label { display: none; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="menu-btn" aria-label="Open navigation" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a class="brand" href="#introduction">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v6c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12v6c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-6"/></svg>
+    </span>
+    <span class="brand-name">flask-modelkit</span>
+  </a>
+  <span class="brand-ver">v1.0.0</span>
+  <div class="topbar-spacer"></div>
+  <div class="search" role="search">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="search-input" type="search" placeholder="Search the docs" autocomplete="off" aria-label="Search the docs" aria-controls="search-results">
+    <kbd>/</kbd>
+    <ul class="results" id="search-results" hidden></ul>
+  </div>
+  <a class="gh-link" href="https://github.com/AnozieChibuike/FlaskModelKit" target="_blank" rel="noopener" aria-label="Star flask-modelkit on GitHub">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.6 22.4c.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0C17.3 4.3 18.3 4.6 18.3 4.6c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.9 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A11.5 11.5 0 0 0 12 .5Z"/></svg>
+    <span class="gh-label">Star</span>
+    <svg class="star" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.1l-5.7 3.2 1.2-6.4L2.8 9.5l6.4-.8Z"/></svg>
+    <span class="gh-count" data-stat="stars" data-hide-empty hidden></span>
+  </a>
+  <button class="icon-btn" id="theme-btn" aria-label="Switch to dark theme">
+    <svg id="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+    <svg id="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+  </button>
+</header>
+<div class="scrim" id="scrim"></div>
+
+<div class="shell">
+  <nav class="nav-panel" id="nav-panel" aria-label="Documentation">
+    <div class="nav-group">
+      <p class="nav-title">Getting started</p>
+      <ul>
+        <li><a href="#introduction">Introduction</a></li>
+        <li><a href="#installation">Installation</a></li>
+        <li><a href="#quick-start">Quick start</a></li>
+        <li><a href="#ordering-rule">The ordering rule</a></li>
+        <li><a href="#ai-agents">Use with AI agents</a></li>
+      </ul>
+    </div>
+    <div class="nav-group">
+      <p class="nav-title">Mixins</p>
+      <ul>
+        <li><a href="#mixins">Overview &amp; builder</a></li>
+        <li><a href="#basemodelmixin"><code>BaseModelMixin</code></a></li>
+        <li><a href="#uuidmixin"><code>UUIDMixin</code></a></li>
+        <li><a href="#intidmixin"><code>IntIdMixin</code></a></li>
+        <li><a href="#timestampmixin"><code>TimestampMixin</code></a></li>
+        <li><a href="#softdeletemixin"><code>SoftDeleteMixin</code></a></li>
+        <li><a href="#crudmixin"><code>CRUDMixin</code></a></li>
+        <li><a href="#serializermixin"><code>SerializerMixin</code></a></li>
+        <li><a href="#bundled-db">Bundled <code>db</code> &amp; <code>BaseModel</code></a></li>
+        <li><a href="#recipes">Recipes</a></li>
+      </ul>
+    </div>
+    <div class="nav-group">
+      <p class="nav-title">Guides</p>
+      <ul>
+        <li><a href="#writing">Creating &amp; updating</a></li>
+        <li><a href="#create-or-abort">Create from request data</a></li>
+        <li><a href="#protected-fields">Protected fields</a></li>
+        <li><a href="#transactions">Transactions</a></li>
+        <li><a href="#reading">Reading &amp; filtering</a></li>
+        <li><a href="#pagination">Pagination</a></li>
+        <li><a href="#custom-queries">Custom queries</a></li>
+        <li><a href="#serialization">Serialisation</a></li>
+        <li><a href="#hidden-fields">Hidden fields</a></li>
+        <li><a href="#hidden-vs-protected">Hidden vs protected</a></li>
+        <li><a href="#depth">Depth &amp; relationships</a></li>
+        <li><a href="#soft-delete">Soft delete</a></li>
+        <li><a href="#migrations">Migrations</a></li>
+      </ul>
+    </div>
+    <div class="nav-group">
+      <p class="nav-title">Project examples</p>
+      <ul>
+        <li><a href="#example-blog">Blog API</a></li>
+        <li><a href="#example-checkout">Shop checkout</a></li>
+        <li><a href="#example-lookup">Lookup tables</a></li>
+      </ul>
+    </div>
+    <div class="nav-group">
+      <p class="nav-title">Reference</p>
+      <ul>
+        <li><a href="#api-reference">API reference</a></li>
+        <li><a href="#column-reference">Column reference</a></li>
+        <li><a href="#community">Community &amp; stats</a></li>
+        <li><a href="#gotchas">Gotchas &amp; FAQ</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main id="content">
+
+<!-- ================= INTRODUCTION ================= -->
+<section class="doc" id="introduction" data-group="Getting started">
+  <div class="hero">
+    <span class="eyebrow">Flask-SQLAlchemy · model mixins</span>
+    <h1>The base model you keep rewriting, <span>done once.</span></h1>
+    <p class="lead">Most Flask projects end up with the same base model: a UUID key, <code>created_at</code>/<code>updated_at</code>, <code>save()</code>, <code>to_dict()</code>, maybe soft delete. This package gives you those pieces as small, tested mixins that you combine per model.</p>
+    <div class="hero-actions">
+      <a class="btn primary" href="#quick-start">Quick start</a>
+      <div class="install-pill"><span>pip install flask-modelkit</span><button class="copy" data-copy="pip install flask-modelkit">Copy</button></div>
+    </div>
+    <div class="stats" aria-label="Project stats">
+      <a class="stat" href="https://github.com/AnozieChibuike/FlaskModelKit" target="_blank" rel="noopener"><span class="num" data-stat="stars">—</span><span class="lbl">GitHub stars</span></a>
+      <a class="stat" href="https://pypistats.org/packages/flask-modelkit" target="_blank" rel="noopener"><span class="num" data-stat="month">—</span><span class="lbl">downloads / month</span></a>
+      <a class="stat" href="https://pepy.tech/projects/flask-modelkit" target="_blank" rel="noopener"><span class="num" data-stat="total">—</span><span class="lbl">downloads, all time</span></a>
+      <a class="stat" href="https://pypi.org/project/flask-modelkit/" target="_blank" rel="noopener"><span class="num" data-stat="version">—</span><span class="lbl">latest release</span></a>
+    </div>
+  </div>
+
+  <div class="code"><pre><code class="language-python">class Post(UUIDMixin, TimestampMixin, SoftDeleteMixin, CRUDMixin, SerializerMixin, db.Model):
+    title = db.Column(db.String(200), nullable=False)</code></pre></div>
+
+  <div class="features">
+    <div class="feature"><h4>Pick what you need</h4><p>UUID or integer keys, timestamps, soft delete, CRUD helpers and serialisation are separate mixins. <code>BaseModelMixin</code> bundles the common set.</p></div>
+    <div class="feature"><h4>Soft delete that really hides rows</h4><p>Deleted rows are filtered out of every ORM query: helpers, <code>Model.query</code>, <code>db.select()</code>, <code>session.get()</code> and relationship loads.</p></div>
+    <div class="feature"><h4>Safe writes from request data</h4><p><code>create_or_abort(request.json)</code> and <code>update(request.json)</code> only set mapped columns and never touch <code>id</code>, timestamps or a <code>protected_column()</code>. Missing or duplicate fields get a 400 or 409 that names them.</p></div>
+    <div class="feature"><h4>Safe serialisation</h4><p><code>to_dict()</code> never outputs a <code>hidden_column()</code>, limits relationship depth, never loops on <code>back_populates</code>, and can return JSON-ready values. <code>secret_column()</code> is hidden and protected at once.</p></div>
+    <div class="feature"><h4>Efficient queries</h4><p>Counts and existence checks run in SQL. Pagination has a stable order, so no row appears on two pages.</p></div>
+    <div class="feature"><h4>Clean migrations</h4><p>Defaults are generated in Python, so Alembic never produces endless "alter column" diffs.</p></div>
+    <div class="feature"><h4>Typed</h4><p>Ships <code>py.typed</code>. <code>User.get()</code> returns <code>User | None</code>, <code>User.filter_all()</code> returns <code>list[User]</code>.</p></div>
+    <div class="feature"><h4>Uses your <code>db</code></h4><p>No global <code>SQLAlchemy()</code> is forced on you. Mix into your own <code>db.Model</code>, or use the bundled one.</p></div>
+  </div>
+</section>
+
+<!-- ================= INSTALL ================= -->
+<section class="doc" id="installation" data-group="Getting started">
+  <h2><a class="anchor" href="#installation">Installation</a></h2>
+  <div class="code"><pre><code class="language-bash">pip install flask-modelkit</code></pre></div>
+  <p>Requirements:</p>
+  <div class="req">
+    <span class="chip">Python ≥ 3.10</span>
+    <span class="chip">Flask ≥ 3.0</span>
+    <span class="chip">Flask-SQLAlchemy ≥ 3.1.1</span>
+    <span class="chip">SQLAlchemy ≥ 2.0.16</span>
+  </div>
+  <div class="callout note"><strong class="t">Formerly FlaskSQLAlchemyBaseModel</strong><p>flask-modelkit 1.0 continues the <code>FlaskSQLAlchemyBaseModel</code> package under a new name. To switch, run <code>pip uninstall FlaskSQLAlchemyBaseModel</code>, install <code>flask-modelkit</code>, and change <code>from flasksqlalchemybasemodel import …</code> to <code>from flask_modelkit import …</code>. The mixins create the same columns, so your tables need no migration. Timestamps are now UTC; 1.2 used server-local time.</p></div>
+  <p>Everything is importable from the top-level package:</p>
+  <div class="code"><pre><code class="language-python">from flask_modelkit import (
+    BaseModelMixin,     # UUID + timestamps + CRUD + to_dict
+    UUIDMixin, IntIdMixin, TimestampMixin,
+    SoftDeleteMixin, CRUDMixin, SerializerMixin,
+    hidden_column,      # never sent to the client by to_dict()
+    protected_column,   # never set from client input
+    secret_column,      # both: for password hashes, API keys, tokens
+    utcnow,             # the UTC clock the timestamps use
+    PaginationReturn,   # TypedDict returned by paginate()
+    InvalidBodyError, MissingFieldsError, DuplicateValueError,  # create_or_abort() errors
+    db, BaseModel,      # optional bundled SQLAlchemy() and abstract base
+)</code></pre></div>
+</section>
+
+<!-- ================= QUICK START ================= -->
+<section class="doc" id="quick-start" data-group="Getting started">
+  <h2><a class="anchor" href="#quick-start">Quick start</a></h2>
+  <p>A complete, runnable app: one model, create/read/update/list endpoints.</p>
+  <ol class="steps">
+    <li>
+      <h4>Define a model</h4>
+      <p>Put the mixin <strong>before</strong> <code>db.Model</code>. You only declare your own columns; <code>id</code>, <code>created_at</code> and <code>updated_at</code> come from the mixin.</p>
+      <div class="code"><div class="code-head">models.py<button class="copy">Copy</button></div><pre><code class="language-python">from flask_sqlalchemy import SQLAlchemy
+from flask_modelkit import BaseModelMixin, protected_column, secret_column
+
+db = SQLAlchemy()
+
+
+class User(BaseModelMixin, db.Model):
+    name = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    is_admin = protected_column(db.Boolean, default=False)   # clients can't set it
+    password_hash = secret_column(db.String(200))            # never sent, never set</code></pre></div>
+    </li>
+    <li>
+      <h4>Wire up the app and create the tables</h4>
+      <div class="code"><div class="code-head">app.py<button class="copy">Copy</button></div><pre><code class="language-python">from flask import Flask, jsonify, request
+from werkzeug.security import generate_password_hash
+
+from models import User, db
+
+app = Flask(__name__)
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
+db.init_app(app)
+
+with app.app_context():
+    db.create_all()          # or use Flask-Migrate, see Migrations</code></pre></div>
+    </li>
+    <li>
+      <h4>Add endpoints</h4>
+      <div class="code"><div class="code-head">app.py (continued)<button class="copy">Copy</button></div><pre><code class="language-python">@app.post("/users")
+def create_user():
+    data = request.get_json(silent=True) or {}
+    pw = data.get("password")
+    # 400 naming missing fields · 409 if the email is taken · unknown keys dropped
+    user = User.create_or_abort(
+        data,
+        required=["password"],
+        password_hash=generate_password_hash(pw) if pw else None,
+    )
+    return jsonify(user.to_dict(json_safe=True)), 201
+
+
+@app.get("/users/&lt;id&gt;")
+def get_user(id):
+    return jsonify(User.get_or_404(id).to_dict(json_safe=True))
+
+
+@app.patch("/users/&lt;id&gt;")
+def update_user(id):
+    user = User.get_or_404(id)
+    user.update(request.get_json(silent=True) or {})   # id, timestamps, is_admin, password_hash ignored
+    return jsonify(user.to_dict(json_safe=True))
+
+
+@app.get("/users")
+def list_users():
+    page = User.paginate(page=request.args.get("page", 1, type=int), per_page=20)
+    page["items"] = [u.to_dict(json_safe=True) for u in page["items"]]
+    return jsonify(page)</code></pre></div>
+    </li>
+    <li>
+      <h4>Call it</h4>
+      <div class="code"><pre><code class="language-bash">curl -X POST localhost:5000/users \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Ada", "email": "ada@example.com", "password": "s3cret"}'</code></pre></div>
+      <div class="code"><div class="code-head">201 Created<button class="copy">Copy</button></div><pre><code class="language-json">{
+  "id": "3f1c9a7e-5b2d-4c8e-9f10-2a6b7d4e1c33",
+  "created_at": "2026-11-07T10:15:00.123456",
+  "updated_at": "2026-11-07T10:15:00.123456",
+  "name": "Ada",
+  "email": "ada@example.com",
+  "is_admin": false
+}</code></pre></div>
+      <p class="muted">No <code>password_hash</code> in the output: it is a <code>secret_column</code>, so it is never sent. Sending <code>"is_admin": true</code> or your own <code>"password_hash"</code> is ignored, because both are protected. See <a href="#hidden-vs-protected">Hidden vs protected</a>.</p>
+      <p>Bad requests get a clear JSON error, without any code of yours:</p>
+      <div class="code"><div class="code-head">400 Bad Request · body {"name": "Ada"}<button class="copy">Copy</button></div><pre><code class="language-json">{"error": "missing_fields", "message": "Missing required field(s): email, password", "fields": ["email", "password"]}</code></pre></div>
+      <div class="code"><div class="code-head">409 Conflict · same email again<button class="copy">Copy</button></div><pre><code class="language-json">{"error": "duplicate", "message": "A User with this email already exists.", "fields": ["email"]}</code></pre></div>
+    </li>
+  </ol>
+</section>
+
+<!-- ================= ORDERING RULE ================= -->
+<section class="doc" id="ordering-rule" data-group="Getting started">
+  <h2><a class="anchor" href="#ordering-rule">The ordering rule</a></h2>
+  <p>There is one rule to remember: <strong>mixins go before <code>db.Model</code></strong> in the class bases.</p>
+  <div class="code"><pre><code class="language-python">class Post(BaseModelMixin, db.Model):   # ✓ correct
+class Post(db.Model, BaseModelMixin):   # ✗ wrong</code></pre></div>
+  <p>Python runs base-class constructors in method-resolution order, and SQLAlchemy's constructor does not call the next one in line. With the mixins first, <code>UUIDMixin</code> and <code>TimestampMixin</code> run their <code>__init__</code>, fill in <code>id</code> and the timestamps, then hand off to SQLAlchemy. That is why an id exists before you save:</p>
+  <div class="code"><pre><code class="language-python">post = Post(title="Hello")
+post.id          # '3f2b…'  usable right away, e.g. to build a URL
+post.created_at  # datetime(2026, 11, 7, 10, 15, 0, 123456)</code></pre></div>
+  <p>The order <em>among</em> the mixins does not matter.</p>
+</section>
+
+<!-- ================= AI AGENTS ================= -->
+<section class="doc" id="ai-agents" data-group="Getting started">
+  <span class="eyebrow">Getting started</span>
+  <h2><a class="anchor" href="#ai-agents">Use with AI agents</a></h2>
+  <p>AI coding assistants know Flask-SQLAlchemy well, but they don't know this package's rules. Without them, an agent will write <code>User.create(**request.json)</code>, put <code>db.Model</code> first, or store a password hash in a <code>hidden_column</code>. flask-modelkit ships an <a href="https://anoziechibuike.github.io/FlaskModelKit/AGENT.md"><code>AGENT.md</code></a> that spells those rules out. Add it to your project once, and your agent follows it.</p>
+  <div class="install-pill" style="align-self:start"><span>https://anoziechibuike.github.io/FlaskModelKit/AGENT.md</span><button class="copy" data-copy="https://anoziechibuike.github.io/FlaskModelKit/AGENT.md">Copy</button></div>
+
+  <h3>Add it to your agent</h3>
+  <p>Run one of these in your project's root folder:</p>
+  <div class="code" data-tabs>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="0">Claude Code</button>
+      <button role="tab" aria-selected="false" data-tab="1">Cursor</button>
+      <button role="tab" aria-selected="false" data-tab="2">GitHub Copilot</button>
+      <button role="tab" aria-selected="false" data-tab="3">Codex &amp; AGENTS.md</button>
+      <button role="tab" aria-selected="false" data-tab="4">Any chat</button>
+    </div>
+    <div class="tabpanel" data-panel="0"><button class="copy">Copy</button><pre><code class="language-bash"># Save the rules, then import them from CLAUDE.md
+mkdir -p .claude
+curl -fsSL https://anoziechibuike.github.io/FlaskModelKit/AGENT.md -o .claude/flask-modelkit.md
+echo "@.claude/flask-modelkit.md" &gt;&gt; CLAUDE.md</code></pre></div>
+    <div class="tabpanel" data-panel="1" hidden><button class="copy">Copy</button><pre><code class="language-bash"># A project rule that attaches automatically to Python files
+mkdir -p .cursor/rules
+{ printf -- '---\ndescription: How to use flask-modelkit models, fields and endpoints\nglobs: **/*.py\nalwaysApply: false\n---\n\n'
+  curl -fsSL https://anoziechibuike.github.io/FlaskModelKit/AGENT.md; } &gt; .cursor/rules/flask-modelkit.mdc</code></pre></div>
+    <div class="tabpanel" data-panel="2" hidden><button class="copy">Copy</button><pre><code class="language-bash"># Path-specific instructions, applied to Python files (VS Code, JetBrains, github.com)
+mkdir -p .github/instructions
+{ printf -- '---\napplyTo: "**/*.py"\n---\n\n'
+  curl -fsSL https://anoziechibuike.github.io/FlaskModelKit/AGENT.md; } &gt; .github/instructions/flask-modelkit.instructions.md</code></pre></div>
+    <div class="tabpanel" data-panel="3" hidden><button class="copy">Copy</button><pre><code class="language-bash"># AGENTS.md is read by Codex, Jules, Amp, Zed and other agents
+curl -fsSL https://anoziechibuike.github.io/FlaskModelKit/AGENT.md &gt;&gt; AGENTS.md
+
+# Gemini CLI reads GEMINI.md instead
+curl -fsSL https://anoziechibuike.github.io/FlaskModelKit/AGENT.md &gt;&gt; GEMINI.md</code></pre></div>
+    <div class="tabpanel" data-panel="4" hidden><button class="copy">Copy</button><pre><code class="language-text">Before writing any code, read https://anoziechibuike.github.io/FlaskModelKit/AGENT.md
+and follow it for everything that uses flask-modelkit in this conversation.</code></pre></div>
+  </div>
+  <p class="muted">Commit the file it creates so everyone on your team, and every CI agent, gets the same rules.</p>
+
+  <div class="callout note"><strong class="t">Keep it in step with your version</strong><p>The link above always serves the latest rules. To match the version in your <code>requirements.txt</code>, download from the release tag instead, for example <code>https://raw.githubusercontent.com/AnozieChibuike/FlaskModelKit/v1.0.0/AGENT.md</code>. Run the command again after upgrading.</p></div>
+
+  <h3>What it teaches the agent</h3>
+  <ul style="padding-left:22px;display:grid;gap:6px">
+    <li><a href="#ordering-rule">Mixins before <code>db.Model</code></a>, and which mixins to combine for which model.</li>
+    <li>Request data goes through <a href="#create-or-abort"><code>create_or_abort()</code></a> and <code>update()</code>, never <code>create(**request.json)</code>.</li>
+    <li><a href="#hidden-vs-protected">Hidden vs protected</a>: <code>secret_column</code> for secrets, <code>protected_column</code> for permissions, ownership and computed values.</li>
+    <li>Protected, required fields are passed as keyword arguments, such as <code>author=current_user</code>.</li>
+    <li>UTC timestamps, <a href="#soft-delete">soft-delete</a> behaviour, JSON with <code>to_dict(json_safe=True)</code>, and SQL counts instead of <code>len(Model.all())</code>.</li>
+  </ul>
+</section>
+
+<!-- ================= MIXINS OVERVIEW ================= -->
+<section class="doc" id="mixins" data-group="Mixins">
+  <span class="eyebrow">Mixins</span>
+  <h2><a class="anchor" href="#mixins">Overview &amp; builder</a></h2>
+  <p>Every feature is a separate mixin. Choose a primary key and the features you want, and the builder shows the class line, the columns your table gets, and the methods available on the model.</p>
+
+  <div class="builder" id="builder">
+    <div class="builder-controls">
+      <fieldset>
+        <legend>Primary key</legend>
+        <label class="opt"><input type="radio" name="pk" id="pk-uuid" value="uuid" checked><span><code>UUIDMixin</code><small>UUID4 string, set in Python</small></span></label>
+        <label class="opt"><input type="radio" name="pk" id="pk-int" value="int"><span><code>IntIdMixin</code><small>Integer, set by the database</small></span></label>
+        <label class="opt"><input type="radio" name="pk" id="pk-none" value="none"><span>My own<small>Declare <code>id</code> yourself</small></span></label>
+      </fieldset>
+      <fieldset>
+        <legend>Features</legend>
+        <label class="opt"><input type="checkbox" id="f-ts" checked><span><code>TimestampMixin</code><small>created_at, updated_at</small></span></label>
+        <label class="opt"><input type="checkbox" id="f-crud" checked><span><code>CRUDMixin</code><small>save, update, get, paginate…</small></span></label>
+        <label class="opt"><input type="checkbox" id="f-ser" checked><span><code>SerializerMixin</code><small>to_dict()</small></span></label>
+        <label class="opt"><input type="checkbox" id="f-soft"><span><code>SoftDeleteMixin</code><small>deleted_at, soft_delete()</small></span></label>
+      </fieldset>
+    </div>
+    <div class="builder-out">
+      <h4>Your model</h4>
+      <div class="code"><pre><code class="language-python" id="b-code"></code></pre></div>
+      <h4>Table columns</h4>
+      <div class="schema" id="b-schema"></div>
+      <h4>Methods &amp; properties</h4>
+      <div class="method-chips" id="b-methods"></div>
+    </div>
+  </div>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Mixin</th><th>Adds</th></tr></thead>
+    <tbody>
+      <tr><td><a href="#basemodelmixin"><code>BaseModelMixin</code></a></td><td>UUIDMixin + TimestampMixin + CRUDMixin + SerializerMixin</td></tr>
+      <tr><td><a href="#uuidmixin"><code>UUIDMixin</code></a></td><td><code>id</code>: UUID4 string primary key, set when the object is constructed</td></tr>
+      <tr><td><a href="#intidmixin"><code>IntIdMixin</code></a></td><td><code>id</code>: auto-increment integer primary key, set by the database on insert</td></tr>
+      <tr><td><a href="#timestampmixin"><code>TimestampMixin</code></a></td><td><code>created_at</code>, <code>updated_at</code> in UTC</td></tr>
+      <tr><td><a href="#softdeletemixin"><code>SoftDeleteMixin</code></a></td><td><code>deleted_at</code>, <code>soft_delete()</code>, <code>restore()</code>, <code>is_deleted</code>; hides deleted rows</td></tr>
+      <tr><td><a href="#crudmixin"><code>CRUDMixin</code></a></td><td class="wrap"><code>create</code>, <code>save</code>, <code>update</code>, <code>delete</code>, <code>get</code>, filters, counts, <code>paginate</code></td></tr>
+      <tr><td><a href="#serializermixin"><code>SerializerMixin</code></a></td><td><code>to_dict()</code>, hidden fields</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- BaseModelMixin -->
+<section class="doc" id="basemodelmixin" data-group="Mixins">
+  <span class="eyebrow">Mixin</span>
+  <h2><a class="anchor" href="#basemodelmixin"><code>BaseModelMixin</code></a></h2>
+  <p>The batteries-included combination, and the right default for most models. It is exactly:</p>
+  <div class="code"><pre><code class="language-python">class BaseModelMixin(UUIDMixin, TimestampMixin, CRUDMixin, SerializerMixin):
+    """UUID key + timestamps + CRUD/query helpers + to_dict()."""</code></pre></div>
+  <div class="code"><pre><code class="language-python">class Article(BaseModelMixin, db.Model):
+    title = db.Column(db.String(200), nullable=False)
+    body = db.Column(db.Text)
+
+article = Article.create(title="Hello")
+article.id, article.created_at      # set automatically
+article.update({"body": "…"})       # safe update + commit
+article.to_dict(json_safe=True)     # ready for jsonify()</code></pre></div>
+  <div class="schema">
+    <div class="schema-head"><span>table article</span><span>BaseModelMixin</span></div>
+    <div class="schema-row"><span class="pk">id</span><span>String(126) PK</span><span class="src">UUIDMixin</span></div>
+    <div class="schema-row"><span>created_at</span><span>DateTime NOT NULL</span><span class="src">TimestampMixin</span></div>
+    <div class="schema-row"><span>updated_at</span><span>DateTime NOT NULL</span><span class="src">TimestampMixin</span></div>
+    <div class="schema-row own"><span>title</span><span>String(200) NOT NULL</span><span class="src">your column</span></div>
+    <div class="schema-row own"><span>body</span><span>Text</span><span class="src">your column</span></div>
+  </div>
+  <p>Add soft delete by putting <code>SoftDeleteMixin</code> in front: <code>class Article(SoftDeleteMixin, BaseModelMixin, db.Model)</code>.</p>
+</section>
+
+<!-- UUIDMixin -->
+<section class="doc" id="uuidmixin" data-group="Mixins">
+  <span class="eyebrow">Mixin · primary key</span>
+  <h2><a class="anchor" href="#uuidmixin"><code>UUIDMixin</code></a></h2>
+  <p>A UUID4 string primary key. It is generated in Python <em>when the object is constructed</em>, so you can use it before the first flush: in a URL, a log line, or as a foreign key for a child created in the same transaction.</p>
+  <div class="api">
+    <div class="api-sig"><span class="kind col">column</span><span class="name">id</span><span class="ret">: Mapped[str] = String(126), primary_key=True</span></div>
+    <div class="api-body">
+      <p>Default: <code>str(uuid.uuid4())</code>. Pass <code>id=...</code> to the constructor to choose it yourself.</p>
+      <div class="code"><pre><code class="language-python">class Invite(UUIDMixin, CRUDMixin, db.Model):
+    email = db.Column(db.String(120))
+
+invite = Invite(email="ada@example.com")
+link = f"https://app.example.com/invites/{invite.id}"   # before saving
+invite.save()
+
+legacy = Invite(id="b1946ac9-2a7c-4d3e-9b1f-0c1d2e3f4a5b", email="x@y.z")  # explicit id</code></pre></div>
+    </div>
+  </div>
+  <div class="callout note"><strong class="t">Why String(126)?</strong><p>Strings work identically on SQLite, PostgreSQL and MySQL, and the extra width leaves room for prefixed ids if you ever pass your own. A foreign key to a UUID model is <code>db.Column(db.String(126), db.ForeignKey("table.id"))</code>.</p></div>
+</section>
+
+<!-- IntIdMixin -->
+<section class="doc" id="intidmixin" data-group="Mixins">
+  <span class="eyebrow">Mixin · primary key</span>
+  <h2><a class="anchor" href="#intidmixin"><code>IntIdMixin</code></a></h2>
+  <p>An auto-increment integer primary key, assigned by the database on insert. Good for lookup tables, internal join tables, or when you are adding the package to an existing integer-keyed schema.</p>
+  <div class="api">
+    <div class="api-sig"><span class="kind col">column</span><span class="name">id</span><span class="ret">: Mapped[int] = Integer, primary_key=True, autoincrement=True</span></div>
+    <div class="api-body">
+      <p>The value is <code>None</code> until the first flush or commit.</p>
+      <div class="code"><pre><code class="language-python">class Tag(IntIdMixin, CRUDMixin, SerializerMixin, db.Model):
+    name = db.Column(db.String(30), unique=True)
+
+tag = Tag(name="python")
+tag.id          # None
+tag.save()
+tag.id          # 1</code></pre></div>
+    </div>
+  </div>
+  <p>Use one primary-key mixin per model: <code>UUIDMixin</code> or <code>IntIdMixin</code>, never both.</p>
+</section>
+
+<!-- TimestampMixin -->
+<section class="doc" id="timestampmixin" data-group="Mixins">
+  <span class="eyebrow">Mixin</span>
+  <h2><a class="anchor" href="#timestampmixin"><code>TimestampMixin</code></a></h2>
+  <p>Adds <code>created_at</code> and <code>updated_at</code>, both in UTC. Both are set to the same instant when the object is constructed.</p>
+  <div class="api">
+    <div class="api-sig"><span class="kind col">column</span><span class="name">created_at</span><span class="ret">: Mapped[datetime] = DateTime, nullable=False</span></div>
+    <div class="api-body"><p>Set once, on construction. Protected from <code>update()</code>.</p></div>
+  </div>
+  <div class="api">
+    <div class="api-sig"><span class="kind col">column</span><span class="name">updated_at</span><span class="ret">: Mapped[datetime] = DateTime, nullable=False, onupdate=utcnow</span></div>
+    <div class="api-body"><p>Refreshed on <strong>every</strong> UPDATE of the row, whether through <code>save()</code>/<code>update()</code> or a plain <code>db.session.commit()</code> after setting attributes.</p></div>
+  </div>
+  <div class="code"><pre><code class="language-python">class Note(UUIDMixin, TimestampMixin, CRUDMixin, db.Model):
+    text = db.Column(db.Text)
+
+note = Note.create(text="draft")
+note.created_at == note.updated_at   # True
+
+note.text = "final"
+db.session.commit()                  # plain commit still bumps updated_at
+note.updated_at > note.created_at    # True</code></pre></div>
+  <div class="callout note"><strong class="t">Naive UTC</strong><p>Values are stored as <em>naive</em> UTC datetimes, so they round-trip identically on SQLite (which drops tzinfo), PostgreSQL and MySQL. Compare them against <a href="#api-utcnow"><code>utcnow()</code></a>, not <code>datetime.now()</code>.</p></div>
+  <div class="code"><pre><code class="language-python">from datetime import timedelta
+from flask_modelkit import utcnow
+
+recent = db.session.scalars(
+    Note.select().where(Note.created_at &gt;= utcnow() - timedelta(days=7))
+).all()</code></pre></div>
+</section>
+
+<!-- SoftDeleteMixin -->
+<section class="doc" id="softdeletemixin" data-group="Mixins">
+  <span class="eyebrow">Mixin</span>
+  <h2><a class="anchor" href="#softdeletemixin"><code>SoftDeleteMixin</code></a></h2>
+  <p>Marks rows as deleted instead of removing them. Deleted rows are hidden from every ORM query automatically. Full behaviour is in the <a href="#soft-delete">soft delete guide</a>.</p>
+  <div class="api">
+    <div class="api-sig"><span class="kind col">column</span><span class="name">deleted_at</span><span class="ret">: Mapped[datetime | None] = DateTime, nullable=True, index=True</span></div>
+    <div class="api-body"><p><code>NULL</code> while the row is live; the deletion time (UTC) once soft-deleted. Protected from <code>update()</code>.</p></div>
+  </div>
+  <div class="api">
+    <div class="api-sig"><span class="kind">property</span><span class="name">is_deleted</span><span class="ret">→ bool</span></div>
+    <div class="api-body"><p><code>True</code> when <code>deleted_at</code> is set.</p></div>
+  </div>
+  <div class="api">
+    <div class="api-sig"><span class="kind">method</span><span class="name">soft_delete(commit=True)</span><span class="ret">→ None</span></div>
+    <div class="api-body"><p>Sets <code>deleted_at</code> to now. The row stays in the table.</p></div>
+  </div>
+  <div class="api">
+    <div class="api-sig"><span class="kind">method</span><span class="name">restore(commit=True)</span><span class="ret">→ None</span></div>
+    <div class="api-body"><p>Clears <code>deleted_at</code>, so the row is visible again.</p></div>
+  </div>
+  <div class="code"><pre><code class="language-python">class Post(SoftDeleteMixin, BaseModelMixin, db.Model):
+    title = db.Column(db.String(200))
+
+post.soft_delete()
+post.is_deleted                    # True
+Post.get(post.id)                  # None, hidden
+Post.get(post.id, include_deleted=True).restore()</code></pre></div>
+</section>
+
+<!-- CRUDMixin -->
+<section class="doc" id="crudmixin" data-group="Mixins">
+  <span class="eyebrow">Mixin</span>
+  <h2><a class="anchor" href="#crudmixin"><code>CRUDMixin</code></a></h2>
+  <p>Write methods on instances and query helpers on the class. All of them use the session of the <code>db</code> your model inherits from and must run inside an application context (a request, a CLI command, or <code>with app.app_context():</code>).</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Write</th><th>Read</th><th>Count / check</th></tr></thead>
+    <tbody>
+      <tr><td><a href="#api-create"><code>create()</code></a>, <a href="#create-or-abort"><code>create_or_abort()</code></a></td><td><a href="#api-get"><code>get()</code></a></td><td><a href="#api-count"><code>count_all()</code></a></td></tr>
+      <tr><td><a href="#api-save"><code>save()</code></a></td><td><a href="#api-get"><code>get_or_404()</code></a></td><td><a href="#api-count"><code>filter_and_count_all()</code></a></td></tr>
+      <tr><td><a href="#api-update"><code>update()</code></a></td><td><a href="#api-filter"><code>filter_one()</code></a></td><td><a href="#api-count"><code>exists()</code></a></td></tr>
+      <tr><td><a href="#api-delete"><code>delete()</code></a></td><td><a href="#api-filter"><code>filter_all()</code></a></td><td><a href="#api-paginate"><code>paginate()</code></a></td></tr>
+      <tr><td><a href="#api-close"><code>close()</code></a></td><td><a href="#api-all"><code>all()</code></a>, <a href="#api-select"><code>select()</code></a></td><td></td></tr>
+    </tbody>
+  </table></div>
+  <p>What <code>update()</code> and <code>create_or_abort()</code> may change is controlled by <a href="#protected-fields">protected fields</a>: mark columns with <code>protected_column()</code> or list names in <code>__protected_fields__</code>. Each method is covered in the <a href="#writing">guides</a> and the <a href="#api-reference">API reference</a>.</p>
+</section>
+
+<!-- SerializerMixin -->
+<section class="doc" id="serializermixin" data-group="Mixins">
+  <span class="eyebrow">Mixin</span>
+  <h2><a class="anchor" href="#serializermixin"><code>SerializerMixin</code></a></h2>
+  <p>Adds <code>to_dict()</code>: columns plus related objects, with depth control, cycle safety, hidden fields and optional JSON-safe conversion.</p>
+  <div class="code"><pre><code class="language-python">user.to_dict()
+# {"id": "…", "created_at": datetime(…), "updated_at": datetime(…),
+#  "name": "Ada", "posts": [{…}, {…}]}
+
+user.to_dict(json_safe=True)       # datetimes → ISO strings, etc.
+user.to_dict(depth=0)              # columns only
+user.to_dict(exclude=["email"])    # leave fields out of this response</code></pre></div>
+  <p>See <a href="#serialization">Serialisation</a> for every option, <a href="#hidden-fields">Hidden fields</a> for keeping columns out of responses, and <a href="#hidden-vs-protected">Hidden vs protected</a> for secrets.</p>
+</section>
+
+<!-- bundled db -->
+<section class="doc" id="bundled-db" data-group="Mixins">
+  <span class="eyebrow">Convenience</span>
+  <h2><a class="anchor" href="#bundled-db">Bundled <code>db</code> &amp; <code>BaseModel</code></a></h2>
+  <p>If your app does not have a <code>SQLAlchemy()</code> instance yet, use the package's. <code>BaseModel</code> is an abstract class equivalent to <code>BaseModelMixin, db.Model</code>, bound to that <code>db</code>.</p>
+  <div class="code"><pre><code class="language-python">from flask_modelkit import BaseModel, db
+
+class User(BaseModel):
+    name = db.Column(db.String(50))
+
+db.init_app(app)</code></pre></div>
+  <div class="callout note"><strong class="t">Pick one db</strong><p>Models from the bundled <code>db</code> and from your own <code>SQLAlchemy()</code> live in separate metadata and sessions. Use one or the other per app. If you already have a <code>db</code>, mix <code>BaseModelMixin</code> into your own <code>db.Model</code> instead.</p></div>
+</section>
+
+<!-- recipes -->
+<section class="doc" id="recipes" data-group="Mixins">
+  <span class="eyebrow">Mixins</span>
+  <h2><a class="anchor" href="#recipes">Recipes</a></h2>
+  <div class="sub">
+    <h3>Default model</h3>
+    <div class="code"><pre><code class="language-python">class User(BaseModelMixin, db.Model):
+    email = db.Column(db.String(100), unique=True, nullable=False)</code></pre></div>
+    <h3>A user with permissions and secrets</h3>
+    <p>Permission flags are <a href="#protected-fields">protected</a> so clients can't grant them to themselves. The password hash is a <a href="#hidden-vs-protected">secret</a>: never sent, never set from input.</p>
+    <div class="code"><pre><code class="language-python">class User(BaseModelMixin, db.Model):
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    is_admin = protected_column(db.Boolean, default=False, nullable=False)
+    password_hash = secret_column(db.String(255), nullable=False)</code></pre></div>
+    <h3>Soft-deletable content</h3>
+    <div class="code"><pre><code class="language-python">class Post(SoftDeleteMixin, BaseModelMixin, db.Model):
+    title = db.Column(db.String(200))</code></pre></div>
+    <h3>Integer keys, no timestamps</h3>
+    <div class="code"><pre><code class="language-python">class Country(IntIdMixin, CRUDMixin, SerializerMixin, db.Model):
+    code = db.Column(db.String(2), unique=True)</code></pre></div>
+    <h3>Columns only, no helpers</h3>
+    <p>For when you prefer plain <code>db.session</code> calls but still want consistent keys and timestamps.</p>
+    <div class="code"><pre><code class="language-python">class AuditLog(UUIDMixin, TimestampMixin, db.Model):
+    action = db.Column(db.String(50))
+
+db.session.add(AuditLog(action="login"))
+db.session.commit()</code></pre></div>
+    <h3>A project-wide base class</h3>
+    <p>Combine once, inherit everywhere. <code>__abstract__ = True</code> stops SQLAlchemy creating a table for it.</p>
+    <div class="code"><pre><code class="language-python">class Model(SoftDeleteMixin, BaseModelMixin, db.Model):
+    __abstract__ = True
+
+class Invoice(Model):
+    amount = db.Column(db.Numeric(10, 2))</code></pre></div>
+  </div>
+</section>
+
+<!-- ================= WRITING ================= -->
+<section class="doc" id="writing" data-group="Guides">
+  <span class="eyebrow">Guide · CRUD</span>
+  <h2><a class="anchor" href="#writing">Creating &amp; updating</a></h2>
+  <div class="code"><pre><code class="language-python">user = User.create(name="Ada", email="ada@example.com")   # construct + save
+
+user.name = "Ada L."
+user.save()                                               # add + commit
+
+user.update({"name": "Ada Lovelace"})                     # safe set + save
+user.delete()                                             # removes the row</code></pre></div>
+  <div class="sub">
+    <h3><code>update()</code> is safe for request data</h3>
+    <p><code>update()</code> only sets attributes that are mapped columns or relationships on the model. It silently ignores:</p>
+    <ul style="padding-left:22px;display:grid;gap:6px">
+      <li>unknown keys (<code>{"nonsense": 1}</code>) and method names (<code>{"save": "x"}</code>)</li>
+      <li><a href="#protected-fields">protected fields</a>: <code>id</code>, <code>created_at</code>, <code>updated_at</code>, <code>deleted_at</code>, plus any you mark</li>
+    </ul>
+    <div class="code"><pre><code class="language-python">user.update({
+    "name": "Ada",             # set
+    "id": "hacked",            # ignored: protected
+    "created_at": "1970-01-01",# ignored: protected
+    "role": "admin",           # ignored: not a column
+})</code></pre></div>
+    <div class="callout danger"><strong class="t">create() is not filtered</strong><p><code>create(**kwargs)</code> passes everything to the constructor and is meant for trusted code. Never call <code>User.create(**request.json)</code>; use <a href="#create-or-abort"><code>create_or_abort()</code></a> for request data.</p></div>
+  </div>
+</section>
+
+<section class="doc" id="create-or-abort" data-group="Guides">
+  <span class="eyebrow">Guide · CRUD</span>
+  <h2><a class="anchor" href="#create-or-abort">Create from request data</a></h2>
+  <p><code>create_or_abort()</code> is <code>create()</code> for untrusted input. It validates the input, drops unsafe keys, and raises a JSON HTTP error with the exact field names when something is wrong. Most endpoints become one line:</p>
+  <div class="code"><pre><code class="language-python">@app.post("/posts")
+def create_post():
+    post = Post.create_or_abort(request.get_json(silent=True), author=current_user)
+    return jsonify(post.to_dict(json_safe=True)), 201</code></pre></div>
+  <div class="api">
+    <div class="api-sig"><span class="kind">classmethod</span><span class="name">create_or_abort(data, *, fields=None, required=(), commit=True, **values)</span><span class="ret">→ T</span></div>
+    <div class="api-body">
+      <dl class="params">
+        <dt>data</dt><dd>Untrusted input, usually <code>request.get_json(silent=True)</code>. <code>None</code> is treated as <code>{}</code>.</dd>
+        <dt>fields</dt><dd>Optional allowlist. Only these keys are read from <code>data</code>.</dd>
+        <dt>required</dt><dd>Extra names that must be present in <code>data</code>, even if they aren't columns (for example <code>"password"</code>).</dd>
+        <dt>commit</dt><dd>As on <code>create()</code>. With <code>False</code> the row is still flushed, so conflicts are reported immediately.</dd>
+        <dt>**values</dt><dd>Trusted values such as <code>author=current_user</code> or a password hash. They override <code>data</code> and skip protection.</dd>
+      </dl>
+    </div>
+  </div>
+  <h3>What happens, in order</h3>
+  <ol class="steps">
+    <li><h4>Check the body is an object</h4><p>A list or string raises <code>InvalidBodyError</code> (400).</p></li>
+    <li><h4>Drop unsafe keys</h4><p>Keys that aren't mapped attributes, or are <a href="#protected-fields">protected</a>, are removed. With <code>fields=</code>, anything not listed is removed too.</p></li>
+    <li><h4>Check the endpoint itself</h4><p>If a required column can never be filled, because it is protected or left out of <code>fields=</code> and you didn't pass it as a keyword argument, a <code>TypeError</code> explains which field and how to fix it. This is a bug in the endpoint, not the request, so it is raised on <em>every</em> call, even for an empty body, and you find it the first time you try the route.</p></li>
+    <li><h4>Check required fields</h4><p>Every <code>NOT NULL</code> column without a default is required, plus any names in <code>required=</code>. Passing a relationship (<code>author=user</code>) counts for its foreign-key column (<code>author_id</code>). <code>None</code>, <code>""</code> and whitespace-only strings count as missing. All missing fields are reported together with <code>MissingFieldsError</code> (400).</p></li>
+    <li><h4>Create and commit</h4><p>If a unique value is already taken, the session is rolled back and <code>DuplicateValueError</code> (409) names the field. Single-column, composite and soft-deleted conflicts are all detected. Other integrity errors are re-raised so real bugs aren't hidden behind a 409.</p></li>
+  </ol>
+  <h3>Derived values like password hashes</h3>
+  <p>The client sends <code>password</code>, but the column is <code>password_hash</code>. Mark the input as required and pass the hash as a trusted value:</p>
+  <div class="code"><pre><code class="language-python">data = request.get_json(silent=True) or {}
+pw = data.get("password")
+user = User.create_or_abort(
+    data,
+    required=["password"],
+    password_hash=generate_password_hash(pw) if pw else None,
+)</code></pre></div>
+  <h3>Error responses</h3>
+  <p>Errors render as JSON without any setup:</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Exception</th><th>Status</th><th><code>error</code></th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td><code>InvalidBodyError</code></td><td>400</td><td><code>invalid_body</code></td><td>Input is not an object</td></tr>
+      <tr><td><code>MissingFieldsError</code></td><td>400</td><td><code>missing_fields</code></td><td>Required fields missing or blank</td></tr>
+      <tr><td><code>DuplicateValueError</code></td><td>409</td><td><code>duplicate</code></td><td>A unique value is taken</td></tr>
+    </tbody>
+  </table></div>
+  <div class="code"><pre><code class="language-json">{"error": "missing_fields", "message": "Missing required field(s): name, email", "fields": ["name", "email"]}</code></pre></div>
+  <p>They subclass Werkzeug's <code>BadRequest</code> and <code>Conflict</code>, so an error handler you already have still receives them, with the field names on <code>e.fields</code>:</p>
+  <div class="code"><pre><code class="language-python">from flask_modelkit import MissingFieldsError
+
+@app.errorhandler(MissingFieldsError)
+def missing(e):
+    return {"ok": False, "missing": e.fields}, 400</code></pre></div>
+  <div class="callout note"><strong class="t">What it doesn't check</strong><p>Types and formats, such as an integer for <code>age</code> or a valid email address. Use a schema library like marshmallow or pydantic for that and pass its output in. Also note that a 409 rolls back the whole session, including other uncommitted changes.</p></div>
+</section>
+
+<section class="doc" id="protected-fields" data-group="Guides">
+  <span class="eyebrow">Guide · CRUD</span>
+  <h2><a class="anchor" href="#protected-fields">Protected fields</a></h2>
+  <p>A protected field can never be set from <strong>client input</strong>. When you pass a request body to <code>update()</code> or <code>create_or_abort()</code>, protected keys are dropped silently and everything else is applied:</p>
+  <div class="code"><pre><code class="language-python">user.update({"name": "Ada L.", "is_admin": True, "id": "hacked"})
+user.name       # "Ada L."   set
+user.is_admin   # False      ignored: protected
+user.id         # unchanged  ignored: protected by default</code></pre></div>
+  <p>Without protection, any client could send <code>PATCH /me {"is_admin": true}</code> and make itself an admin. This is called <em>mass assignment</em>, and it is the reason protection exists.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Protected by default</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>id</code></td><td>Changing a primary key would orphan related rows</td></tr>
+      <tr><td><code>created_at</code>, <code>updated_at</code></td><td>Timestamps must come from the server's clock</td></tr>
+      <tr><td><code>deleted_at</code></td><td>Clients can't undelete through a PATCH; use <code>restore()</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="sub">
+    <h3>Mark a column protected</h3>
+    <p>Mark the field where you declare it, in either of two equivalent ways:</p>
+    <div class="code"><pre><code class="language-python">from flask_modelkit import BaseModelMixin, protected_column
+
+class Post(BaseModelMixin, db.Model):
+    title = db.Column(db.String(200), nullable=False)
+
+    # 1. Shorthand: same arguments as db.Column, ForeignKey included
+    author_id = protected_column(db.String(126), db.ForeignKey("user.id"), nullable=False)
+
+    # 2. The info flag: works on db.Column, mapped_column and db.relationship
+    status = db.Column(db.String(20), default="draft", info={"protected": True})
+    author = db.relationship("User", info={"protected": True})</code></pre></div>
+    <p><code>protected_column(...)</code> is shorthand for <code>info={"protected": True}</code>. <code>info</code> is SQLAlchemy's own metadata dictionary, so any other keys you keep there are preserved.</p>
+
+    <h3>Protecting by name, and what the <code>|</code> means</h3>
+    <p>The third way is <code>__protected_fields__</code>, a class-level <code>frozenset</code> of names. It is combined with the column flags. Use it for fields you don't declare yourself, such as a column that comes from another package's mixin:</p>
+    <div class="code"><pre><code class="language-python">class Invoice(TenantMixin, BaseModelMixin, db.Model):    # TenantMixin adds tenant_id
+    __protected_fields__ = BaseModelMixin.__protected_fields__ | {"tenant_id"}</code></pre></div>
+    <p>The <code>|</code> is Python's set <strong>union</strong> operator: <code>a | b</code> is a new set containing everything in either set.</p>
+    <div class="code"><pre><code class="language-python">{"id", "created_at"} | {"email"}    # {"id", "created_at", "email"}</code></pre></div>
+    <p>So <code>BaseModelMixin.__protected_fields__ | {"email"}</code> means "the inherited protected fields, plus <code>email</code>". Always start from the inherited set:</p>
+    <div class="code"><pre><code class="language-python">__protected_fields__ = BaseModelMixin.__protected_fields__ | {"email"}   # ✓ id, timestamps, email
+__protected_fields__ = frozenset({"email"})                             # ✗ only email: id is writable again!</code></pre></div>
+    <div class="callout tip"><strong class="t">Prefer the column helpers</strong><p><code>protected_column()</code> and <code>info={"protected": True}</code> can't accidentally drop the defaults, and the protection is visible right next to the column.</p></div>
+
+    <h3>Check the result</h3>
+    <p><code>Model.protected_fields()</code> returns the final combined set, from every source:</p>
+    <div class="code"><pre><code class="language-python">Post.protected_fields()
+# frozenset({"id", "created_at", "updated_at", "deleted_at", "author_id", "status", "author"})</code></pre></div>
+
+    <h3>Your own code can still set them</h3>
+    <p>Protection only filters <em>input</em> passed to <code>update()</code> and <code>create_or_abort()</code>. Trusted code always works:</p>
+    <div class="code"><pre><code class="language-python">user.is_admin = True                          # plain assignment
+user.save()
+User.create(name="Ada", is_admin=True)        # create() is for trusted values
+Post.create_or_abort(data, author=current_user)   # keyword arguments are trusted</code></pre></div>
+  </div>
+
+  <div class="sub">
+    <h3>Common cases</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Case</th><th>Example fields</th><th>Do this</th></tr></thead>
+      <tbody>
+        <tr><td>Permissions</td><td><code>is_admin</code>, <code>role</code>, <code>email_verified</code></td><td><code>protected_column()</code></td></tr>
+        <tr><td>Ownership</td><td><code>author_id</code> and <code>author</code></td><td>Protect the foreign key <strong>and</strong> the relationship. Set the owner as a trusted value.</td></tr>
+        <tr><td>Server-computed values</td><td><code>total</code>, <code>balance</code>, <code>slug</code></td><td><code>protected_column()</code>, then compute them in your code</td></tr>
+        <tr><td>Child collections</td><td><code>comments</code>, <code>posts</code></td><td><code>info={"protected": True}</code> on the relationship</td></tr>
+        <tr><td>Secrets</td><td><code>password_hash</code>, <code>api_key</code></td><td><code>secret_column()</code>: protected <em>and</em> hidden (<a href="#hidden-vs-protected">why both</a>)</td></tr>
+        <tr><td>Set once, read-only afterwards</td><td><code>email</code>, <code>username</code></td><td>Don't protect. Pass an allowlist to profile updates.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>Ownership: protect both sides</h4>
+    <p>A foreign key and its relationship are two separate mapped attributes. Protecting only <code>author_id</code> still lets a client send <code>"author"</code>, and protecting only <code>author</code> still lets it send <code>"author_id"</code>.</p>
+    <div class="code"><pre><code class="language-python">class Post(BaseModelMixin, db.Model):
+    author_id = protected_column(db.String(126), db.ForeignKey("user.id"), nullable=False)
+    author = db.relationship("User", back_populates="posts", info={"protected": True})
+
+@app.post("/posts")
+def create_post():
+    # Whatever author_id the client sends is dropped; the owner comes from the session.
+    post = Post.create_or_abort(request.get_json(silent=True), author=current_user)
+    return jsonify(post.to_dict(json_safe=True)), 201</code></pre></div>
+
+    <h4>Server-computed values</h4>
+    <div class="code"><pre><code class="language-python">class Order(BaseModelMixin, db.Model):
+    total = protected_column(db.Numeric(10, 2), default=Decimal("0"), nullable=False)
+
+order.update(request.json)                     # "total": "0.01" is ignored
+order.total = sum(l.unit_price * l.quantity for l in order.lines)
+order.save()</code></pre></div>
+
+    <h4>Child collections</h4>
+    <p>Relationships are mapped attributes, so <code>{"comments": []}</code> in a PATCH body would replace a post's comments. Protect collections that clients manage through their own endpoints:</p>
+    <div class="code"><pre><code class="language-python">comments = db.relationship("Comment", back_populates="post", info={"protected": True})</code></pre></div>
+
+    <h4 id="set-once">Set once, read-only afterwards</h4>
+    <p>Some fields must be accepted at signup but never changed by a profile edit, such as an email that is only changed through a verification flow. Protection can't express "writable on create only", because it applies to both methods. So leave the field unprotected, and give profile updates an allowlist:</p>
+    <div class="code"><pre><code class="language-python">class User(BaseModelMixin, db.Model):
+    email = db.Column(db.String(120), unique=True, nullable=False)   # not protected
+
+User.create_or_abort(data, ...)        # signup: email accepted, 400 if missing, 409 if taken
+
+PROFILE_FIELDS = {"name", "bio"}
+
+@app.patch("/me")
+def edit_profile():
+    data = request.get_json(silent=True) or {}
+    current_user.update({k: v for k, v in data.items() if k in PROFILE_FIELDS})
+    return jsonify(current_user.to_dict(json_safe=True))</code></pre></div>
+  </div>
+
+  <div class="callout danger"><strong class="t">Protected + required = pass it yourself</strong><p>Input can never fill a protected column. If that column is also <code>NOT NULL</code> without a default, you must pass it as a trusted keyword argument to <code>create_or_abort()</code>. If you forget, <code>create_or_abort()</code> raises a <code>TypeError</code> on the first call that says exactly that:</p></div>
+  <div class="code"><pre><code class="language-python">TypeError: User.create_or_abort(): required field(s) email can never be filled: 'email' is
+protected, so request data can't set it. Pass them as keyword arguments, e.g.
+User.create_or_abort(data, email=...), or, if clients should send them, stop protecting
+them / add them to fields=.</code></pre></div>
+  <p>This is the most common protection mistake: protecting <code>email</code>, then expecting it from the signup body. If clients should send it, don't protect it; see <a href="#set-once">"Set once, read-only afterwards"</a>.</p>
+</section>
+
+<section class="doc" id="transactions" data-group="Guides">
+  <span class="eyebrow">Guide · CRUD</span>
+  <h2><a class="anchor" href="#transactions">Transactions</a></h2>
+  <p><code>create</code>, <code>create_or_abort</code>, <code>save</code>, <code>update</code>, <code>delete</code>, <code>soft_delete</code> and <code>restore</code> all commit by default. Pass <code>commit=False</code> to stage several changes and commit them together:</p>
+  <div class="code"><pre><code class="language-python">order = Order.create(user=user, commit=False)
+for item in cart:
+    OrderLine.create(order=order, product=item, commit=False)
+db.session.commit()          # all or nothing</code></pre></div>
+  <p><code>create_or_abort(..., commit=False)</code> still flushes, so a duplicate value is reported straight away instead of at your final commit. The rollback that comes with a 409 discards every uncommitted change in the session, not only the new row.</p>
+  <p>If a commit from <code>create</code>, <code>save</code> or <code>update</code> fails (a unique constraint, a foreign key), the session is left in a failed state. Roll it back before using it again:</p>
+  <div class="code"><pre><code class="language-python">from sqlalchemy.exc import IntegrityError
+
+try:
+    user.update({"email": new_email})
+except IntegrityError:
+    db.session.rollback()
+    abort(409)</code></pre></div>
+  <p><a href="#create-or-abort"><code>create_or_abort()</code></a> does this rollback for you.</p>
+</section>
+
+<!-- ================= READING ================= -->
+<section class="doc" id="reading" data-group="Guides">
+  <span class="eyebrow">Guide · Queries</span>
+  <h2><a class="anchor" href="#reading">Reading &amp; filtering</a></h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Method</th><th>Returns</th><th>SQL</th></tr></thead>
+    <tbody>
+      <tr><td><code>Model.get(id)</code></td><td>object or <code>None</code></td><td>by primary key</td></tr>
+      <tr><td><code>Model.get_or_404(id)</code></td><td>object, or HTTP 404</td><td>by primary key</td></tr>
+      <tr><td><code>Model.all()</code></td><td><code>list[Model]</code></td><td><code>SELECT</code></td></tr>
+      <tr><td><code>Model.filter_one(**f)</code></td><td>first match or <code>None</code></td><td><code>LIMIT 1</code></td></tr>
+      <tr><td><code>Model.filter_all(**f)</code></td><td><code>list[Model]</code></td><td><code>WHERE …</code></td></tr>
+      <tr><td><code>Model.exists(**f)</code></td><td><code>bool</code></td><td><code>EXISTS</code></td></tr>
+      <tr><td><code>Model.count_all()</code></td><td><code>int</code></td><td><code>COUNT</code></td></tr>
+      <tr><td><code>Model.filter_and_count_all(**f)</code></td><td><code>int</code></td><td><code>COUNT … WHERE</code></td></tr>
+      <tr><td><code>Model.paginate(page, per_page)</code></td><td><code>PaginationReturn</code></td><td><code>LIMIT/OFFSET</code> + <code>COUNT</code></td></tr>
+      <tr><td><code>Model.select()</code></td><td><code>Select</code> to build on</td><td>none until run</td></tr>
+    </tbody>
+  </table></div>
+  <p>Filters are exact-match <code>column=value</code> pairs, combined with AND:</p>
+  <div class="code"><pre><code class="language-python">User.filter_all(country="NG", is_active=True)
+User.filter_one(email="ada@example.com")
+User.exists(email="ada@example.com")          # no rows loaded
+User.filter_and_count_all(country="NG")      # no rows loaded
+
+User.get(None), User.get("")                  # None, no query</code></pre></div>
+  <p>Counts and existence checks run in the database, so they never load rows into Python.</p>
+</section>
+
+<section class="doc" id="pagination" data-group="Guides">
+  <span class="eyebrow">Guide · Queries</span>
+  <h2><a class="anchor" href="#pagination">Pagination</a></h2>
+  <div class="code"><pre><code class="language-python">User.paginate(page=2, per_page=20)
+# {"items": [&lt;User&gt;, ...], "total": 135, "pages": 7, "page": 2, "per_page": 20}</code></pre></div>
+  <ul style="padding-left:22px;display:grid;gap:6px">
+    <li>Ordered by <code>created_at</code>, then primary key, so a row never appears on two pages. Models without timestamps are ordered by primary key.</li>
+    <li>An out-of-range page returns an empty <code>items</code> list, not an error.</li>
+    <li>The return value is a plain dict, typed as <a href="#api-paginationreturn"><code>PaginationReturn</code></a>, so you can replace <code>items</code> before returning it:</li>
+  </ul>
+  <div class="code"><pre><code class="language-python">@app.get("/users")
+def list_users():
+    page = User.paginate(page=request.args.get("page", 1, type=int), per_page=20)
+    page["items"] = [u.to_dict(json_safe=True) for u in page["items"]]
+    return jsonify(page)</code></pre></div>
+  <p><code>paginate()</code> does not take filters. To paginate a filtered query, build it with <code>select()</code> and use Flask-SQLAlchemy's <code>db.paginate</code>, as shown next.</p>
+</section>
+
+<section class="doc" id="custom-queries" data-group="Guides">
+  <span class="eyebrow">Guide · Queries</span>
+  <h2><a class="anchor" href="#custom-queries">Custom queries</a></h2>
+  <p>For ranges, joins, <code>OR</code>, <code>LIKE</code> and custom ordering, start from <code>Model.select()</code> and use SQLAlchemy directly. Soft-deleted rows are still hidden.</p>
+  <div class="code"><pre><code class="language-python">from sqlalchemy import or_
+
+stmt = (
+    User.select()
+    .where(User.created_at &gt;= since)
+    .where(or_(User.name.ilike("%ada%"), User.email.ilike("%ada%")))
+    .order_by(User.name)
+)
+users = db.session.scalars(stmt).all()
+page = db.paginate(stmt, page=1, per_page=20)    # Flask-SQLAlchemy pagination object</code></pre></div>
+  <p><code>Model.select(include_deleted=True)</code> returns the same statement with soft-deleted rows included.</p>
+</section>
+
+<!-- ================= SERIALISATION ================= -->
+<section class="doc" id="serialization" data-group="Guides">
+  <span class="eyebrow">Guide · Serialisation</span>
+  <h2><a class="anchor" href="#serialization">Serialisation</a></h2>
+  <div class="api">
+    <div class="api-sig"><span class="kind">method</span><span class="name">to_dict(depth=1, exclude=(), json_safe=False)</span><span class="ret">→ dict[str, Any]</span></div>
+    <div class="api-body">
+      <dl class="params">
+        <dt>depth</dt><dd>Relationship levels to follow. <code>0</code> = columns only, <code>1</code> (default) = direct relationships, <code>None</code> = every level.</dd>
+        <dt>exclude</dt><dd>Field names to leave out of <em>this</em> object (not nested ones).</dd>
+        <dt>json_safe</dt><dd>Convert values so the result can go straight into <code>jsonify()</code>.</dd>
+      </dl>
+    </div>
+  </div>
+  <p><code>json_safe=True</code> converts column values like this:</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Python value</th><th>JSON value</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td><code>datetime</code>, <code>date</code>, <code>time</code></td><td>ISO 8601 string</td><td><code>"2026-11-07T10:15:00"</code></td></tr>
+      <tr><td><code>Decimal</code></td><td>string (no precision lost)</td><td><code>"9.50"</code></td></tr>
+      <tr><td><code>UUID</code></td><td>string</td><td><code>"3f1c…"</code></td></tr>
+      <tr><td><code>Enum</code></td><td>its <code>.value</code></td><td><code>"active"</code></td></tr>
+      <tr><td><code>bytes</code></td><td>UTF-8 string</td><td><code>"…"</code></td></tr>
+    </tbody>
+  </table></div>
+  <div class="code"><pre><code class="language-python">return jsonify(user.to_dict(json_safe=True))</code></pre></div>
+</section>
+
+<section class="doc" id="hidden-fields" data-group="Guides">
+  <span class="eyebrow">Guide · Serialisation</span>
+  <h2><a class="anchor" href="#hidden-fields">Hidden fields</a></h2>
+  <p>A hidden field is <strong>never</strong> sent to the client by <code>to_dict()</code>: not at any depth, and not when the object appears inside another object's relationships. The value is still stored and readable on the object; it is only left out of the output.</p>
+  <div class="callout danger"><strong class="t">Hidden is not enough for secrets</strong><p>Hidden only stops data going <em>out</em>. A client can still <em>set</em> a hidden column through <code>update()</code> or <code>create_or_abort()</code>. For password hashes, API keys and tokens, use <code>secret_column()</code>, which is hidden <strong>and</strong> <a href="#protected-fields">protected</a>. See <a href="#hidden-vs-protected">Hidden vs protected</a>.</p></div>
+  <div class="sub">
+    <h3>Mark a column hidden</h3>
+    <p><code>hidden_column(...)</code> takes the same arguments as <code>db.Column</code>. It is shorthand for <code>info={"hidden": True}</code>, which also works on <code>db.Column</code>, <code>mapped_column</code> and <code>db.relationship</code>.</p>
+    <div class="code"><pre><code class="language-python">from flask_modelkit import BaseModelMixin, hidden_column
+
+class Integration(BaseModelMixin, db.Model):
+    name = db.Column(db.String(50))
+    webhook_secret = hidden_column(db.String(64))                        # shorthand
+    last_error = db.Column(db.Text, info={"hidden": True})               # same thing
+    deliveries = db.relationship("Delivery", info={"hidden": True})      # relationships too
+
+hook.webhook_secret                 # "whsec_…"  still readable in your code
+"webhook_secret" in hook.to_dict()  # False</code></pre></div>
+    <h3>Or hide by name</h3>
+    <p><code>__hidden_fields__</code> is for hiding a field you don't declare yourself, such as one inherited from a mixin. It is combined with the column flags.</p>
+    <div class="code"><pre><code class="language-python">class User(SoftDeleteMixin, BaseModelMixin, db.Model):
+    __hidden_fields__ = frozenset({"deleted_at"})   # always null for live rows: no need to send it</code></pre></div>
+  </div>
+  <div class="sub">
+    <h3>Common cases</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Case</th><th>Example</th><th>Do this</th></tr></thead>
+      <tbody>
+        <tr><td>Write-only input: the client sends it once and must never see it again</td><td>A webhook secret or third-party token the user pastes in</td><td><code>hidden_column()</code></td></tr>
+        <tr><td>Large or expensive relationships kept out of every payload</td><td><code>deliveries</code>, <code>audit_log</code></td><td><code>info={"hidden": True}</code> on the relationship. Add <code>"protected": True</code> if clients mustn't set it either.</td></tr>
+        <tr><td>Inherited columns you don't want to expose</td><td><code>deleted_at</code>, <code>updated_at</code></td><td><code>__hidden_fields__</code></td></tr>
+        <tr><td>Server-generated secrets and server-only data</td><td><code>password_hash</code>, <code>api_key</code>, <code>fraud_score</code></td><td><code>secret_column()</code>, not <code>hidden_column()</code></td></tr>
+        <tr><td>Leaving a field out of one response only</td><td>No <code>email</code> on a public profile</td><td><code>to_dict(exclude=["email"])</code></td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout tip"><strong class="t">Hidden vs exclude</strong><p>Hidden is a rule for the model: the field is never sent, from any endpoint. <code>exclude=</code> is a choice for one response.</p></div>
+  </div>
+</section>
+
+<section class="doc" id="hidden-vs-protected" data-group="Guides">
+  <span class="eyebrow">Guide · Security</span>
+  <h2><a class="anchor" href="#hidden-vs-protected">Hidden vs protected</a></h2>
+  <p>These are two separate controls on what crosses your API boundary. <strong>Hidden</strong> stops a field going <em>out</em> to the client. <strong>Protected</strong> stops a field coming <em>in</em> from the client. A field can be either, both or neither.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th></th><th>Hidden</th><th>Protected</th></tr></thead>
+    <tbody>
+      <tr><td>Stops data going…</td><td><strong>out</strong>, to the client</td><td><strong>in</strong>, from the client</td></tr>
+      <tr><td>Enforced by</td><td><code>to_dict()</code></td><td><code>update()</code>, <code>create_or_abort()</code></td></tr>
+      <tr><td>Column helper</td><td><code>hidden_column(...)</code></td><td><code>protected_column(...)</code></td></tr>
+      <tr><td>Info flag</td><td class="wrap"><code>info={"hidden": True}</code></td><td class="wrap"><code>info={"protected": True}</code></td></tr>
+      <tr><td>By name</td><td><code>__hidden_fields__</code></td><td><code>__protected_fields__</code></td></tr>
+      <tr><td>On by default for</td><td>nothing</td><td><code>id</code>, timestamps, <code>deleted_at</code></td></tr>
+      <tr><td>Your own code</td><td>can still read it</td><td>can still set it</td></tr>
+    </tbody>
+  </table></div>
+  <p>Fields that need both use <code>secret_column(...)</code>, which sets both flags.</p>
+
+  <div class="sub">
+    <h3>Which one do I need?</h3>
+    <p>Answer two questions about a field, or pick an example, to see how to declare it and what each method does with it.</p>
+    <div class="builder" id="picker">
+      <div class="builder-controls">
+        <fieldset>
+          <legend>Can clients see it in responses?</legend>
+          <label class="opt"><input type="radio" name="see" value="yes" checked><span>Yes<small>It appears in <code>to_dict()</code></small></span></label>
+          <label class="opt"><input type="radio" name="see" value="no"><span>No<small>Never sent to clients</small></span></label>
+        </fieldset>
+        <fieldset>
+          <legend>Can clients set it in requests?</legend>
+          <label class="opt"><input type="radio" name="set" value="yes" checked><span>Yes<small>Taken from the request body</small></span></label>
+          <label class="opt"><input type="radio" name="set" value="no"><span>No<small>Only your code sets it</small></span></label>
+        </fieldset>
+        <fieldset>
+          <legend>Or try an example</legend>
+          <div class="method-chips" id="picker-examples">
+            <button type="button" class="chip-btn" data-see="yes" data-set="yes" data-name="bio">bio</button>
+            <button type="button" class="chip-btn" data-see="yes" data-set="no" data-name="is_admin">is_admin</button>
+            <button type="button" class="chip-btn" data-see="yes" data-set="no" data-name="author_id">author_id</button>
+            <button type="button" class="chip-btn" data-see="no" data-set="yes" data-name="webhook_secret">webhook_secret</button>
+            <button type="button" class="chip-btn" data-see="no" data-set="no" data-name="password_hash">password_hash</button>
+          </div>
+        </fieldset>
+      </div>
+      <div class="builder-out">
+        <h4>Declare it</h4>
+        <div class="code"><pre><code class="language-python" id="picker-code"></code></pre></div>
+        <h4>What happens</h4>
+        <div class="schema" id="picker-effects"></div>
+        <h4>Typical fields</h4>
+        <p class="muted" id="picker-typical"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub">
+    <h3>Cases at a glance</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Field</th><th>Hidden</th><th>Protected</th><th>Declare with</th></tr></thead>
+      <tbody>
+        <tr><td><code>name</code>, <code>bio</code>, <code>title</code></td><td></td><td></td><td><code>db.Column(...)</code></td></tr>
+        <tr><td><code>is_admin</code>, <code>role</code>, <code>author_id</code>, <code>total</code></td><td></td><td>✓</td><td><code>protected_column(...)</code></td></tr>
+        <tr><td>A webhook secret the user pastes in</td><td>✓</td><td></td><td><code>hidden_column(...)</code></td></tr>
+        <tr><td><code>password_hash</code>, <code>api_key</code>, <code>reset_token</code>, <code>fraud_score</code></td><td>✓</td><td>✓</td><td><code>secret_column(...)</code></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="sub">
+    <h3>The mistake to avoid</h3>
+    <div class="code"><pre><code class="language-python">password_hash = hidden_column(db.String(255))     # ✗ hidden, but NOT protected
+
+user.update(request.json)    # body: {"password_hash": "&lt;the attacker's own hash&gt;"}</code></pre></div>
+    <p>The hash never shows up in responses, but the client just replaced it. Anyone who can set the hash can then log in with a password of their choosing. Declare secrets with <code>secret_column</code>:</p>
+    <div class="code"><pre><code class="language-python">password_hash = secret_column(db.String(255), nullable=False)   # ✓ never sent, never set
+
+# Set it from your own code, from the password the client sent:
+User.create_or_abort(data, required=["password"],
+                     password_hash=generate_password_hash(data["password"]) if data.get("password") else None)</code></pre></div>
+    <p>The reverse also matters: <code>protected_column</code> stops <code>is_admin</code> being <em>set</em>, but it still appears in responses. Usually that is what you want, since the UI may need to show it.</p>
+  </div>
+</section>
+
+<style>
+.chip-btn {
+  font: 500 12.5px var(--font-mono); color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 999px; padding: 3px 10px; cursor: pointer;
+}
+.chip-btn:hover { border-color: var(--accent); }
+.chip-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.fx-yes { color: var(--ok); font-weight: 500; }
+.fx-no { color: var(--danger); font-weight: 500; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var box = document.getElementById('picker');
+  if (!box) return;
+  var code = document.getElementById('picker-code');
+  var effects = document.getElementById('picker-effects');
+  var typical = document.getElementById('picker-typical');
+  var chips = box.querySelectorAll('.chip-btn');
+  var name = null;
+  var KINDS = {
+    'yes-yes': { helper: 'db.Column', defaultName: 'bio', type: 'db.Text', comment: 'plain column: no flags',
+      typical: 'name, bio, title, body: ordinary data clients read and write.' },
+    'yes-no': { helper: 'protected_column', defaultName: 'is_admin', type: 'db.Boolean, default=False', comment: 'clients see it, only your code sets it',
+      typical: 'is_admin, role, email_verified (permissions); author_id, owner (ownership); total, balance, slug (computed by the server).' },
+    'no-yes': { helper: 'hidden_column', defaultName: 'webhook_secret', type: 'db.String(64)', comment: 'write-only: accepted, never sent back',
+      typical: 'Write-only input, such as a webhook secret or third-party token the user pastes in once. Rare: if the server generates the value, it is a secret instead.' },
+    'no-no': { helper: 'secret_column', defaultName: 'password_hash', type: 'db.String(255)', comment: 'never sent, never set from input',
+      typical: 'password_hash, api_key, reset_token (secrets); fraud_score, internal_notes (server-only data).' }
+  };
+  var TYPES = { author_id: 'db.String(126), db.ForeignKey("user.id"), nullable=False', password_hash: 'db.String(255), nullable=False' };
+  function val(n) { return box.querySelector('input[name="' + n + '"]:checked').value; }
+  function row(op, ok, yes, no) {
+    var d = document.createElement('div'); d.className = 'schema-row';
+    var a = document.createElement('span'); a.textContent = op;
+    var b = document.createElement('span'); b.className = ok ? 'fx-yes' : 'fx-no'; b.textContent = ok ? yes[0] : no[0];
+    var c = document.createElement('span'); c.className = 'src'; c.textContent = ok ? yes[1] : no[1];
+    d.append(a, b, c); effects.appendChild(d);
+  }
+  function render() {
+    var see = val('see') === 'yes', set = val('set') === 'yes';
+    var k = KINDS[(see ? 'yes' : 'no') + '-' + (set ? 'yes' : 'no')];
+    var field = name || k.defaultName;
+    var type = TYPES[field] || k.type;
+    var line = field + ' = ' + k.helper + '(' + type + ')';
+    code.textContent = (k.helper === 'db.Column' ? '' : 'from flask_modelkit import ' + k.helper + '\n\n') + line + '   # ' + k.comment;
+    code.className = 'language-python';
+    if (window.Prism) Prism.highlightElement(code);
+    effects.innerHTML = '';
+    var head = document.createElement('div'); head.className = 'schema-head';
+    head.innerHTML = '<span>' + field + '</span><span>' + (see ? 'visible' : 'hidden') + ' · ' + (set ? 'writable' : 'protected') + '</span>';
+    effects.appendChild(head);
+    row('to_dict()', see, ['included', 'sent in responses'], ['left out', 'at every depth']);
+    row('update(request.json)', set, ['set', 'from the body'], ['ignored', 'key dropped silently']);
+    row('create_or_abort(request.json)', set, ['accepted', 'from the body'], ['dropped', 'pass it as a keyword argument']);
+    row('your code', true, ['always works', 'obj.' + field + ' = …, create(), keyword args'], ['', '']);
+    typical.textContent = k.typical;
+    chips.forEach(function (c) { c.setAttribute('aria-pressed', String(c.dataset.name === field && name !== null)); });
+  }
+  box.querySelectorAll('input').forEach(function (i) { i.addEventListener('change', function () { name = null; render(); }); });
+  chips.forEach(function (c) {
+    c.addEventListener('click', function () {
+      box.querySelector('input[name="see"][value="' + c.dataset.see + '"]').checked = true;
+      box.querySelector('input[name="set"][value="' + c.dataset.set + '"]').checked = true;
+      name = c.dataset.name; render();
+    });
+  });
+  render();
+});
+</script>
+
+<section class="doc" id="depth" data-group="Guides">
+  <span class="eyebrow">Guide · Serialisation</span>
+  <h2><a class="anchor" href="#depth">Depth &amp; relationships</a></h2>
+  <p>Two-way relationships (<code>back_populates</code> or <code>backref</code>) are safe at any depth. An object already serialised higher up the tree is skipped, so there is no infinite loop:</p>
+  <div class="code"><pre><code class="language-python">author.to_dict(depth=None)
+# {"name": "A", "books": [{"title": "B", "chapters": [{"title": "C"}]}]}
+#                          ^ no "author" key inside the book</code></pre></div>
+  <div class="code"><pre><code class="language-python">author.to_dict(depth=0)   # columns only
+author.to_dict()          # + books, but each book is columns only
+author.to_dict(depth=2)   # + books + each book's chapters</code></pre></div>
+  <div class="callout note"><strong class="t">Watch query counts on lists</strong><p>Each relationship level can mean another query per row. For list endpoints, use <code>depth=0</code>, or load relationships eagerly:</p></div>
+  <div class="code"><pre><code class="language-python">from sqlalchemy.orm import selectinload
+
+stmt = Author.select().options(selectinload(Author.books))
+authors = db.session.scalars(stmt).all()
+data = [a.to_dict() for a in authors]   # no extra queries for books</code></pre></div>
+  <p>On models with <code>SoftDeleteMixin</code>, soft-deleted related objects are left out automatically.</p>
+</section>
+
+<!-- ================= SOFT DELETE ================= -->
+<section class="doc" id="soft-delete" data-group="Guides">
+  <span class="eyebrow">Guide</span>
+  <h2><a class="anchor" href="#soft-delete">Soft delete</a></h2>
+  <p>Soft-deleted rows can be restored, audited, or kept to satisfy foreign keys. Most implementations only filter their own helper methods, so a single raw query leaks deleted data. This mixin hooks into the SQLAlchemy session instead, so deleted rows are left out of <strong>every ORM query</strong> on the model.</p>
+  <div class="code"><pre><code class="language-python">Post.all()                               # hidden
+Post.get(id), Post.filter_one(...)       # hidden
+Post.count_all(), Post.exists(...)       # hidden
+Post.query.filter_by(...).all()          # hidden
+db.session.scalars(db.select(Post))      # hidden
+db.session.get(Post, id)                 # hidden
+author.posts                             # hidden in relationship loads too</code></pre></div>
+  <div class="sub">
+    <h3 id="include-deleted">Including deleted rows</h3>
+    <div class="code"><pre><code class="language-python">Post.get(id, include_deleted=True)
+
+stmt = Post.select(include_deleted=True)                       # same as:
+stmt = db.select(Post).execution_options(include_deleted=True)
+
+trash = db.session.scalars(
+    Post.select(include_deleted=True).where(Post.deleted_at.is_not(None))
+).all()</code></pre></div>
+    <h3>Restoring</h3>
+    <div class="code"><pre><code class="language-python">post = Post.get(id, include_deleted=True)
+post.restore()</code></pre></div>
+    <h3>Hard delete</h3>
+    <p><code>delete()</code> still removes the row, even on soft-delete models. Use it for GDPR erasure or purging old trash.</p>
+    <div class="code"><pre><code class="language-python">post.delete()      # the row is gone</code></pre></div>
+    <h3>Limits</h3>
+    <ul style="padding-left:22px;display:grid;gap:6px">
+      <li><strong><code>update()</code> can't undo a deletion.</strong> <code>deleted_at</code> is protected.</li>
+      <li><strong>Unique constraints still see deleted rows.</strong> A soft-deleted user's email blocks a new signup with the same email, and <code>create_or_abort()</code> reports it as a 409 on <code>email</code>. To let the email be reused, use a partial unique index (<code>WHERE deleted_at IS NULL</code>) on PostgreSQL.</li>
+      <li><strong>Core SQL is not filtered.</strong> Statements on <code>Post.__table__</code> and raw <code>text()</code> SQL see all rows.</li>
+      <li><strong>Bulk statements are not filtered.</strong> For <code>update(Post)</code> / <code>delete(Post)</code>, add <code>.where(Post.deleted_at.is_(None))</code> yourself.</li>
+    </ul>
+    <div class="code"><pre><code class="language-python"># PostgreSQL: unique among live rows only
+class User(SoftDeleteMixin, BaseModelMixin, db.Model):
+    email = db.Column(db.String(120), nullable=False)
+    __table_args__ = (
+        db.Index("uq_user_email_live", "email", unique=True,
+                 postgresql_where=db.text("deleted_at IS NULL")),
+    )</code></pre></div>
+  </div>
+</section>
+
+<!-- ================= MIGRATIONS ================= -->
+<section class="doc" id="migrations" data-group="Guides">
+  <span class="eyebrow">Guide</span>
+  <h2><a class="anchor" href="#migrations">Migrations</a></h2>
+  <p>The mixins are ordinary SQLAlchemy columns, so <a href="https://flask-migrate.readthedocs.io/" target="_blank" rel="noopener">Flask-Migrate</a> (Alembic) picks them up like any other column.</p>
+  <ol class="steps">
+    <li><h4>Install and register</h4>
+      <div class="code"><pre><code class="language-python"># pip install Flask-Migrate
+from flask_migrate import Migrate
+migrate = Migrate(app, db)</code></pre></div></li>
+    <li><h4>Create the migrations folder (once)</h4>
+      <div class="code"><pre><code class="language-bash">flask db init</code></pre></div></li>
+    <li><h4>Generate and apply</h4>
+      <div class="code"><pre><code class="language-bash">flask db migrate -m "add posts"
+flask db upgrade</code></pre></div></li>
+  </ol>
+  <div class="callout tip"><strong class="t">No spurious migrations</strong><p>Every default (UUIDs, timestamps) is generated in Python, not by the database, so there are no server defaults for Alembic to compare. Once your tables match your models, <code>flask db migrate</code> reports no changes. The test suite checks this with Alembic's autogenerate comparison.</p></div>
+  <div class="sub">
+    <h3>Adding a mixin to an existing table</h3>
+    <h4><code>SoftDeleteMixin</code>: no edits needed</h4>
+    <p><code>deleted_at</code> is nullable, so existing rows become "not deleted". The generated migration works as is:</p>
+    <div class="code"><pre><code class="language-python">op.add_column("post", sa.Column("deleted_at", sa.DateTime(), nullable=True))
+op.create_index("ix_post_deleted_at", "post", ["deleted_at"])</code></pre></div>
+    <h4><code>TimestampMixin</code>: backfill existing rows</h4>
+    <p>The columns are <code>NOT NULL</code>. Add them with a temporary server default so existing rows get a value, then drop the default so Python stays in charge:</p>
+    <div class="code"><pre><code class="language-python">def upgrade():
+    with op.batch_alter_table("post") as batch:   # batch mode also works on SQLite
+        batch.add_column(sa.Column("created_at", sa.DateTime(), nullable=False,
+                                   server_default=sa.func.current_timestamp()))
+        batch.add_column(sa.Column("updated_at", sa.DateTime(), nullable=False,
+                                   server_default=sa.func.current_timestamp()))
+    with op.batch_alter_table("post") as batch:
+        batch.alter_column("created_at", server_default=None)
+        batch.alter_column("updated_at", server_default=None)</code></pre></div>
+    <h4><code>UUIDMixin</code> on a table with integer ids</h4>
+    <p>Changing a primary key type changes every foreign key that points at it, so don't do it in one autogenerated migration. Keep <code>IntIdMixin</code> for that table, or migrate in steps: add a UUID column and backfill it, update the foreign keys, then swap the primary key.</p>
+    <h3>Timezones</h3>
+    <p>Timestamps are naive UTC. Treat them as UTC in SQL reports:</p>
+    <div class="code"><pre><code class="language-sql">-- PostgreSQL
+SELECT created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Lagos' FROM post;</code></pre></div>
+  </div>
+</section>
+
+<!-- ================= EXAMPLE: BLOG ================= -->
+<section class="doc" id="example-blog" data-group="Project examples">
+  <span class="eyebrow">Project example</span>
+  <h2><a class="anchor" href="#example-blog">Blog API</a></h2>
+  <p>A small but complete blog backend: users, posts and comments, with password hashing, protected ownership fields, a trash can, restore, filtered pagination and nested JSON. It uses almost every feature in the package.</p>
+  <div class="code" data-tabs>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="0">extensions.py</button>
+      <button role="tab" aria-selected="false" data-tab="1">models.py</button>
+      <button role="tab" aria-selected="false" data-tab="2">app.py</button>
+      <button role="tab" aria-selected="false" data-tab="3">routes.py</button>
+    </div>
+    <div class="tabpanel" data-panel="0"><button class="copy">Copy</button><pre><code class="language-python">from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+migrate = Migrate()</code></pre></div>
+    <div class="tabpanel" data-panel="1" hidden><button class="copy">Copy</button><pre><code class="language-python">import enum
+
+from flask_modelkit import BaseModelMixin, SoftDeleteMixin, protected_column, secret_column
+
+from extensions import db
+
+
+class Model(SoftDeleteMixin, BaseModelMixin, db.Model):
+    """Every table: UUID id, timestamps, soft delete, CRUD, to_dict()."""
+    __abstract__ = True
+
+
+class User(Model):
+    name = db.Column(db.String(80), nullable=False)
+    # Not protected: signup must accept it. Profile edits use an allowlist instead.
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    is_admin = protected_column(db.Boolean, default=False, nullable=False)
+    password_hash = secret_column(db.String(255), nullable=False)
+
+    posts = db.relationship("Post", back_populates="author", info={"protected": True})
+
+
+class PostStatus(enum.Enum):
+    DRAFT = "draft"
+    PUBLISHED = "published"
+
+
+class Post(Model):
+    # Clients may edit title/body/status, never ownership or children.
+    title = db.Column(db.String(200), nullable=False)
+    body = db.Column(db.Text, default="")
+    status = db.Column(db.Enum(PostStatus), default=PostStatus.DRAFT, nullable=False)
+    author_id = protected_column(db.String(126), db.ForeignKey("user.id"), nullable=False)
+
+    author = db.relationship("User", back_populates="posts", info={"protected": True})
+    comments = db.relationship("Comment", back_populates="post", info={"protected": True})
+
+
+class Comment(Model):
+    body = db.Column(db.String(1000), nullable=False)
+    post_id = protected_column(db.String(126), db.ForeignKey("post.id"), nullable=False)
+
+    post = db.relationship("Post", back_populates="comments", info={"protected": True})</code></pre></div>
+    <div class="tabpanel" data-panel="2" hidden><button class="copy">Copy</button><pre><code class="language-python">from flask import Flask
+
+from extensions import db, migrate
+
+
+def create_app():
+    app = Flask(__name__)
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///blog.db"
+
+    db.init_app(app)
+    migrate.init_app(app, db)
+
+    from routes import bp
+    app.register_blueprint(bp)
+    return app</code></pre></div>
+    <div class="tabpanel" data-panel="3" hidden><button class="copy">Copy</button><pre><code class="language-python">from flask import Blueprint, abort, jsonify, request
+from werkzeug.security import generate_password_hash
+
+from extensions import db
+from models import Comment, Post, PostStatus, User
+
+bp = Blueprint("api", __name__)
+
+
+def body():
+    return request.get_json(silent=True) or {}
+
+
+# ---- users ---------------------------------------------------------------
+
+@bp.post("/users")
+def register():
+    data = body()
+    pw = data.get("password")
+    # 400 lists missing name/email/password · 409 if email is taken
+    # is_admin and password_hash are protected: a client can't sign up as
+    # admin or choose its own hash. The hash is passed as a trusted value.
+    user = User.create_or_abort(
+        data,
+        required=["password"],
+        password_hash=generate_password_hash(pw) if pw else None,
+    )
+    return jsonify(user.to_dict(depth=0, json_safe=True)), 201
+
+
+PROFILE_FIELDS = {"name"}   # email is set at signup, then changed only by verification
+
+
+@bp.patch("/users/&lt;id&gt;")
+def edit_profile(id):
+    user = User.get_or_404(id)
+    user.update({k: v for k, v in body().items() if k in PROFILE_FIELDS})
+    return jsonify(user.to_dict(depth=0, json_safe=True))
+
+
+# ---- posts ---------------------------------------------------------------
+
+@bp.post("/users/&lt;user_id&gt;/posts")
+def create_post(user_id):
+    author = User.get_or_404(user_id)
+    # title required; author_id comes from the trusted `author=` value
+    post = Post.create_or_abort(body(), fields=["title", "body"], author=author)
+    return jsonify(post.to_dict(json_safe=True)), 201
+
+
+@bp.get("/posts")
+def list_published():
+    # paginate() has no filters, so build the query and use db.paginate
+    stmt = (Post.select()
+            .where(Post.status == PostStatus.PUBLISHED)
+            .order_by(Post.created_at.desc()))
+    page = db.paginate(stmt, page=request.args.get("page", 1, type=int),
+                       per_page=10, error_out=False)
+    return jsonify({
+        "items": [p.to_dict(depth=0, json_safe=True) for p in page.items],
+        "total": page.total, "page": page.page, "pages": page.pages,
+    })
+
+
+@bp.get("/posts/&lt;id&gt;")
+def read_post(id):
+    # depth=1 → author (without password_hash) and live comments
+    return jsonify(Post.get_or_404(id).to_dict(json_safe=True))
+
+
+@bp.patch("/posts/&lt;id&gt;")
+def edit_post(id):
+    post = Post.get_or_404(id)
+    data = body()
+    if "status" in data:
+        data["status"] = PostStatus(data["status"])   # "published" → enum
+    post.update(data)        # author_id, id, timestamps can't change
+    return jsonify(post.to_dict(depth=0, json_safe=True))
+
+
+@bp.delete("/posts/&lt;id&gt;")
+def trash_post(id):
+    Post.get_or_404(id).soft_delete()
+    return "", 204
+
+
+@bp.get("/trash")
+def trash():
+    stmt = Post.select(include_deleted=True).where(Post.deleted_at.is_not(None))
+    return jsonify([p.to_dict(depth=0, json_safe=True)
+                    for p in db.session.scalars(stmt)])
+
+
+@bp.post("/posts/&lt;id&gt;/restore")
+def restore_post(id):
+    post = Post.get(id, include_deleted=True) or abort(404)
+    post.restore()
+    return jsonify(post.to_dict(depth=0, json_safe=True))
+
+
+# ---- comments ------------------------------------------------------------
+
+@bp.post("/posts/&lt;id&gt;/comments")
+def add_comment(id):
+    post = Post.get_or_404(id)      # trashed posts 404 automatically
+    comment = Comment.create_or_abort(body(), post=post)   # 400 if body is blank
+    return jsonify(comment.to_dict(depth=0, json_safe=True)), 201</code></pre></div>
+  </div>
+
+  <div class="sub">
+    <h3>Run it</h3>
+    <div class="code"><pre><code class="language-bash">pip install flask-modelkit Flask-Migrate
+export FLASK_APP="app:create_app"
+flask db init &amp;&amp; flask db migrate -m "initial" &amp;&amp; flask db upgrade
+flask run</code></pre></div>
+    <h3>What <code>GET /posts/&lt;id&gt;</code> returns</h3>
+    <div class="code"><pre><code class="language-json">{
+  "id": "9c0e…", "created_at": "2026-11-07T09:02:11.401233",
+  "updated_at": "2026-11-07T09:40:52.118904", "deleted_at": null,
+  "title": "Shipping v2", "body": "…", "status": "published",
+  "author_id": "3f1c…",
+  "author": {
+    "id": "3f1c…", "name": "Ada", "email": "ada@example.com", "is_admin": false,
+    "created_at": "…", "updated_at": "…", "deleted_at": null
+  },
+  "comments": [
+    {"id": "a71d…", "body": "Congrats!", "post_id": "9c0e…", "…": "…"}
+  ]
+}</code></pre></div>
+    <h3>Which feature does what</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Behaviour</th><th>Provided by</th></tr></thead>
+      <tbody>
+        <tr><td>No <code>password_hash</code> anywhere in JSON, even nested under <code>author</code></td><td><code>secret_column()</code> (hidden)</td></tr>
+        <tr><td>Signup can't create an admin or set its own password hash</td><td><code>protected_column()</code>, <code>secret_column()</code></td></tr>
+        <tr><td>PATCH can't move a post to another author, swap its comments, or forge timestamps</td><td><code>protected_column()</code>, <code>info={"protected": True}</code></td></tr>
+        <tr><td>Email can be set at signup but not through a profile edit</td><td>Allowlist passed to <code>update()</code></td></tr>
+        <tr><td>Signup answers 400 with the missing fields, or 409 for a taken email</td><td><code>create_or_abort()</code></td></tr>
+        <tr><td>Deleting a post moves it to <code>/trash</code>; its URL then 404s</td><td><code>SoftDeleteMixin</code> + <code>get_or_404()</code></td></tr>
+        <tr><td>Deleted comments disappear from <code>post.comments</code></td><td>Soft-delete filter on relationship loads</td></tr>
+        <tr><td><code>"status": "published"</code> instead of an enum object</td><td><code>to_dict(json_safe=True)</code></td></tr>
+        <tr><td>Post doesn't list itself again inside <code>comments[].post</code></td><td>Cycle-safe <code>to_dict()</code></td></tr>
+        <tr><td>Clean <code>flask db migrate</code> output</td><td>Python-side defaults</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ================= EXAMPLE: CHECKOUT ================= -->
+<section class="doc" id="example-checkout" data-group="Project examples">
+  <span class="eyebrow">Project example</span>
+  <h2><a class="anchor" href="#example-checkout">Shop checkout</a></h2>
+  <p>An order and its lines must be saved together or not at all. Stage every write with <code>commit=False</code>, then commit once. UUIDs exist before the flush, so you can return the order id or build a payment reference immediately.</p>
+  <div class="code"><div class="code-head">checkout.py<button class="copy">Copy</button></div><pre><code class="language-python">from decimal import Decimal
+
+from flask import abort, jsonify, request
+from flask_modelkit import BaseModelMixin, protected_column
+
+from extensions import db
+
+
+class Product(BaseModelMixin, db.Model):
+    name = db.Column(db.String(100), nullable=False)
+    price = db.Column(db.Numeric(10, 2), nullable=False)
+    stock = db.Column(db.Integer, default=0, nullable=False)
+
+
+class Order(BaseModelMixin, db.Model):
+    # Computed and owned by the server: clients can never set these.
+    user_id = protected_column(db.String(126), nullable=False)
+    total = protected_column(db.Numeric(10, 2), default=Decimal("0"), nullable=False)
+    reference = db.Column(db.String(40), unique=True)
+    lines = db.relationship("OrderLine", back_populates="order")
+
+
+class OrderLine(BaseModelMixin, db.Model):
+    order_id = db.Column(db.String(126), db.ForeignKey("order.id"), nullable=False)
+    product_id = db.Column(db.String(126), db.ForeignKey("product.id"), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    unit_price = db.Column(db.Numeric(10, 2), nullable=False)
+    order = db.relationship("Order", back_populates="lines")
+
+
+# `app` and `current_user` come from your project (e.g. Flask-Login)
+@app.post("/checkout")
+def checkout():
+    cart = request.get_json()["items"]        # [{"product_id": "…", "quantity": 2}]
+    order = Order(user_id=current_user.id)
+    order.reference = f"ORD-{order.id[:8].upper()}"   # id exists before saving
+    total = Decimal("0")
+
+    for item in cart:
+        product = Product.get(item["product_id"])
+        if product is None or product.stock &lt; item["quantity"]:
+            db.session.rollback()
+            abort(409, description="item unavailable")
+        product.stock -= item["quantity"]
+        OrderLine.create(order=order, product_id=product.id, quantity=item["quantity"],
+                         unit_price=product.price, commit=False)
+        total += product.price * item["quantity"]
+
+    order.total = total
+    order.save()                       # one commit: order, lines and stock together
+    return jsonify(order.to_dict(json_safe=True)), 201
+    # "total": "59.98"  (Decimal → string, no float rounding)</code></pre></div>
+</section>
+
+<!-- ================= EXAMPLE: LOOKUP ================= -->
+<section class="doc" id="example-lookup" data-group="Project examples">
+  <span class="eyebrow">Project example</span>
+  <h2><a class="anchor" href="#example-lookup">Lookup tables</a></h2>
+  <p>Small reference tables don't need UUIDs or timestamps. Combine <code>IntIdMixin</code> with just the helpers you use, and seed them from a CLI command.</p>
+  <div class="code"><div class="code-head">countries.py<button class="copy">Copy</button></div><pre><code class="language-python">import click
+from flask_modelkit import CRUDMixin, IntIdMixin, SerializerMixin
+
+from extensions import db
+
+
+class Country(IntIdMixin, CRUDMixin, SerializerMixin, db.Model):
+    code = db.Column(db.String(2), unique=True, nullable=False)
+    name = db.Column(db.String(80), nullable=False)
+
+
+SEED = [("NG", "Nigeria"), ("GH", "Ghana"), ("KE", "Kenya")]
+
+
+@app.cli.command("seed-countries")
+def seed_countries():
+    for code, name in SEED:
+        if not Country.exists(code=code):
+            Country.create(code=code, name=name, commit=False)
+    db.session.commit()
+    click.echo(f"{Country.count_all()} countries")
+
+
+@app.get("/countries")
+def countries():
+    return jsonify([c.to_dict() for c in Country.all()])
+    # [{"id": 1, "code": "NG", "name": "Nigeria"}, …]</code></pre></div>
+</section>
+
+<!-- ================= API REFERENCE ================= -->
+<section class="doc" id="api-reference" data-group="Reference">
+  <span class="eyebrow">Reference</span>
+  <h2><a class="anchor" href="#api-reference">API reference</a></h2>
+  <p>Every public name in <code>flask_modelkit</code>. <code>T</code> means "your model class".</p>
+
+  <div class="sub">
+    <h3>CRUDMixin · instance methods</h3>
+    <div class="api" id="api-save">
+      <div class="api-sig"><span class="kind">method</span><span class="name">save(commit=True)</span><span class="ret">→ None</span></div>
+      <div class="api-body"><p>Adds the object to the session and commits. With <code>commit=False</code>, only adds it; you commit later.</p></div>
+    </div>
+    <div class="api" id="api-update">
+      <div class="api-sig"><span class="kind">method</span><span class="name">update(updates: dict, commit=True)</span><span class="ret">→ None</span></div>
+      <div class="api-body"><p>Sets each key that is a mapped column or relationship and not <a href="#api-protected-fields">protected</a>, then calls <code>save()</code>. Other keys are ignored silently.</p></div>
+    </div>
+    <div class="api" id="api-delete">
+      <div class="api-sig"><span class="kind">method</span><span class="name">delete(commit=True)</span><span class="ret">→ None</span></div>
+      <div class="api-body"><p>Removes the row from the database. This is a hard delete, even on <code>SoftDeleteMixin</code> models.</p></div>
+    </div>
+    <div class="api" id="api-close">
+      <div class="api-sig"><span class="kind">method</span><span class="name">close()</span><span class="ret">→ None</span></div>
+      <div class="api-body"><p>Removes the current scoped session (<code>db.session.remove()</code>). Flask-SQLAlchemy already does this at the end of each request; use it in long-running scripts or workers.</p></div>
+    </div>
+
+    <h3>CRUDMixin · class methods</h3>
+    <div class="api" id="api-create">
+      <div class="api-sig"><span class="kind">classmethod</span><span class="name">create(commit=True, **kwargs)</span><span class="ret">→ T</span></div>
+      <div class="api-body"><p>Constructs <code>cls(**kwargs)</code>, saves it, and returns it. Protection doesn't apply: it is for trusted code, so it can set protected fields.</p></div>
+    </div>
+    <div class="api" id="api-create-or-abort">
+      <div class="api-sig"><span class="kind">classmethod</span><span class="name">create_or_abort(data, *, fields=None, required=(), commit=True, **values)</span><span class="ret">→ T</span></div>
+      <div class="api-body"><p>Creates from untrusted input. Drops unknown and protected keys, raises <code>MissingFieldsError</code> (400) or <code>DuplicateValueError</code> (409) with the field names. Raises <code>TypeError</code> if a required column is protected or outside <code>fields=</code> and wasn't passed. See <a href="#create-or-abort">Create from request data</a>.</p></div>
+    </div>
+    <div class="api" id="api-get">
+      <div class="api-sig"><span class="kind">classmethod</span><span class="name">get(id, include_deleted=False)</span><span class="ret">→ T | None</span></div>
+      <div class="api-body"><p>Object by primary key. Returns <code>None</code> for a missing row, a soft-deleted row (unless <code>include_deleted=True</code>), or an <code>id</code> of <code>None</code>/<code>""</code> without querying.</p></div>
+    </div>
+    <div class="api">
+      <div class="api-sig"><span class="kind">classmethod</span><span class="name">get_or_404(id)</span><span class="ret">→ T</span></div>
+      <div class="api-body"><p>Like <code>get()</code>, but aborts the request with 404 and the description <code>"&lt;Model&gt; not found"</code>.</p></div>
+    </div>
+    <div class="api" id="api-all">
+      <div class="api-sig"><span class="kind">classmethod</span><span class="name">all()</span><span class="ret">→ list[T]</span></div>
+      <div class="api-body"><p>Every live row. Prefer <code>paginate()</code> for tables that grow.</p></div>
+    </div>
+    <div class="api" id="api-filter">
+      <div class="api-sig"><span class="kind">classmethod</span><span class="name">filter_one(**filters)</span><span class="ret">→ T | None</span></div>
+      <div class="api-body"><p>First row matching all <code>column=value</code> pairs (<code>LIMIT 1</code>).</p></div>
+    </div>
+    <div class="api">
+      <div class="api-sig"><span class="kind">classmethod</span><span class="name">filter_all(**filters)</span><span class="ret">→ list[T]</span></div>
+      <div class="api-body"><p>All rows matching all <code>column=value</code> pairs.</p></div>
+    </div>
+    <div class="api" id="api-count">
+      <div class="api-sig"><span class="kind">classmethod</span><span class="name">count_all()</span><span class="ret">→ int</span></div>
+      <div class="api-body"><p>Number of live rows, computed with SQL <code>COUNT</code>.</p></div>
+    </div>
+    <div class="api">
+      <div class="api-sig"><span class="kind">classmethod</span><span class="name">filter_and_count_all(**filters)</span><span class="ret">→ int</span></div>
+      <div class="api-body"><p>Number of rows matching the filters, with SQL <code>COUNT</code>.</p></div>
+    </div>
+    <div class="api">
+      <div class="api-sig"><span class="kind">classmethod</span><span class="name">exists(**filters)</span><span class="ret">→ bool</span></div>
+      <div class="api-body"><p>Whether any row matches, with SQL <code>EXISTS</code>.</p></div>
+    </div>
+    <div class="api" id="api-paginate">
+      <div class="api-sig"><span class="kind">classmethod</span><span class="name">paginate(page=1, per_page=10)</span><span class="ret">→ PaginationReturn</span></div>
+      <div class="api-body"><p>One page, ordered by <code>created_at</code> (when present) then primary key. Out-of-range pages return empty <code>items</code>.</p></div>
+    </div>
+    <div class="api" id="api-select">
+      <div class="api-sig"><span class="kind">classmethod</span><span class="name">select(include_deleted=False)</span><span class="ret">→ Select</span></div>
+      <div class="api-body"><p>A <code>select(Model)</code> statement to build custom queries on. <code>include_deleted=True</code> sets the execution option that shows soft-deleted rows.</p></div>
+    </div>
+    <div class="api">
+      <div class="api-sig"><span class="kind attr">class attribute</span><span class="name">__protected_fields__</span><span class="ret">: frozenset[str]</span></div>
+      <div class="api-body"><p>Names that <code>update()</code> and <code>create_or_abort()</code> never take from input. Default <code>{"id", "created_at", "updated_at", "deleted_at"}</code>. Extend with <code>|</code>; it is combined with columns marked <code>info={"protected": True}</code>.</p></div>
+    </div>
+    <div class="api" id="api-protected-fields">
+      <div class="api-sig"><span class="kind">classmethod</span><span class="name">protected_fields()</span><span class="ret">→ frozenset[str]</span></div>
+      <div class="api-body"><p>The final set of protected names: <code>__protected_fields__</code> plus every column and relationship marked <code>info={"protected": True}</code> (including <code>protected_column()</code> and <code>secret_column()</code>). Use it to check a model.</p></div>
+    </div>
+
+    <h3>SerializerMixin</h3>
+    <div class="api">
+      <div class="api-sig"><span class="kind">method</span><span class="name">to_dict(depth=1, exclude=(), json_safe=False)</span><span class="ret">→ dict[str, Any]</span></div>
+      <div class="api-body"><p>Columns and relationships as a dict. See <a href="#serialization">Serialisation</a>.</p></div>
+    </div>
+    <div class="api">
+      <div class="api-sig"><span class="kind attr">class attribute</span><span class="name">__hidden_fields__</span><span class="ret">: frozenset[str]</span></div>
+      <div class="api-body"><p>Names never serialised, combined with columns and relationships marked <code>info={"hidden": True}</code>. Default: empty.</p></div>
+    </div>
+
+    <h3>SoftDeleteMixin</h3>
+    <div class="api">
+      <div class="api-sig"><span class="kind">method</span><span class="name">soft_delete(commit=True)</span><span class="ret">→ None</span></div>
+      <div class="api-body"><p>Sets <code>deleted_at = utcnow()</code> and saves.</p></div>
+    </div>
+    <div class="api">
+      <div class="api-sig"><span class="kind">method</span><span class="name">restore(commit=True)</span><span class="ret">→ None</span></div>
+      <div class="api-body"><p>Sets <code>deleted_at = None</code> and saves.</p></div>
+    </div>
+    <div class="api">
+      <div class="api-sig"><span class="kind">property</span><span class="name">is_deleted</span><span class="ret">→ bool</span></div>
+      <div class="api-body"><p><code>deleted_at is not None</code>.</p></div>
+    </div>
+    <div class="api">
+      <div class="api-sig"><span class="kind attr">execution option</span><span class="name">include_deleted=True</span></div>
+      <div class="api-body"><p>Pass via <code>.execution_options(include_deleted=True)</code> on any ORM statement to include soft-deleted rows.</p></div>
+    </div>
+
+    <h3>Functions &amp; types</h3>
+    <div class="api" id="api-hidden-column">
+      <div class="api-sig"><span class="kind">function</span><span class="name">hidden_column(*args, **kwargs)</span><span class="ret">→ mapped_column</span></div>
+      <div class="api-body"><p>A column <code>to_dict()</code> never outputs. Same arguments as <code>db.Column</code>/<code>mapped_column</code>. Adds <code>"hidden": True</code> to the column's <code>info</code> dict, keeping any other <code>info</code> keys you pass. Doesn't stop input from setting it.</p></div>
+    </div>
+    <div class="api" id="api-protected-column">
+      <div class="api-sig"><span class="kind">function</span><span class="name">protected_column(*args, **kwargs)</span><span class="ret">→ mapped_column</span></div>
+      <div class="api-body"><p>A column <code>update()</code> and <code>create_or_abort()</code> never set from input. Same arguments as <code>db.Column</code>, including <code>db.ForeignKey(...)</code>. Adds <code>"protected": True</code> to <code>info</code>. Still appears in <code>to_dict()</code>.</p></div>
+    </div>
+    <div class="api" id="api-secret-column">
+      <div class="api-sig"><span class="kind">function</span><span class="name">secret_column(*args, **kwargs)</span><span class="ret">→ mapped_column</span></div>
+      <div class="api-body"><p>Hidden and protected: never sent, never set from input. Adds <code>"hidden": True</code> and <code>"protected": True</code> to <code>info</code>. Use for password hashes, API keys and tokens.</p></div>
+    </div>
+    <div class="api" id="api-utcnow">
+      <div class="api-sig"><span class="kind">function</span><span class="name">utcnow()</span><span class="ret">→ datetime</span></div>
+      <div class="api-body"><p>Current UTC time as a naive <code>datetime</code>. The clock every timestamp in the package uses.</p></div>
+    </div>
+    <div class="api" id="api-paginationreturn">
+      <div class="api-sig"><span class="kind attr">TypedDict</span><span class="name">PaginationReturn</span></div>
+      <div class="api-body">
+        <dl class="params">
+          <dt>items</dt><dd><code>list</code> of model objects on this page</dd>
+          <dt>total</dt><dd><code>int</code>, rows across all pages</dd>
+          <dt>pages</dt><dd><code>int</code>, number of pages</dd>
+          <dt>page</dt><dd><code>int</code>, the current page (1-based)</dd>
+          <dt>per_page</dt><dd><code>int</code>, page size</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="api" id="api-errors">
+      <div class="api-sig"><span class="kind attr">exceptions</span><span class="name">InvalidBodyError · MissingFieldsError · DuplicateValueError</span></div>
+      <div class="api-body"><p>Raised by <code>create_or_abort()</code>. Subclasses of Werkzeug <code>BadRequest</code> (400) and <code>Conflict</code> (409) that render a JSON body <code>{"error", "message", "fields"}</code>. <code>e.fields</code> holds the field names.</p></div>
+    </div>
+    <div class="api">
+      <div class="api-sig"><span class="kind attr">object</span><span class="name">db</span><span class="ret">: SQLAlchemy</span></div>
+      <div class="api-body"><p>The bundled Flask-SQLAlchemy instance. Call <code>db.init_app(app)</code>.</p></div>
+    </div>
+    <div class="api">
+      <div class="api-sig"><span class="kind attr">class</span><span class="name">BaseModel</span></div>
+      <div class="api-body"><p>Abstract <code>BaseModelMixin</code> model bound to the bundled <code>db</code>.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="doc" id="column-reference" data-group="Reference">
+  <span class="eyebrow">Reference</span>
+  <h2><a class="anchor" href="#column-reference">Column reference</a></h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Column</th><th>Mixin</th><th>Type</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>id</code></td><td>UUIDMixin</td><td><code>String(126)</code> PK</td><td><code>uuid4()</code> on construct</td><td>Pass <code>id=</code> to override</td></tr>
+      <tr><td><code>id</code></td><td>IntIdMixin</td><td><code>Integer</code> PK</td><td>database autoincrement</td><td><code>None</code> until flush</td></tr>
+      <tr><td><code>created_at</code></td><td>TimestampMixin</td><td><code>DateTime</code> NOT NULL</td><td><code>utcnow()</code> on construct</td><td>Naive UTC</td></tr>
+      <tr><td><code>updated_at</code></td><td>TimestampMixin</td><td><code>DateTime</code> NOT NULL</td><td><code>utcnow()</code>, refreshed on UPDATE</td><td>Naive UTC</td></tr>
+      <tr><td><code>deleted_at</code></td><td>SoftDeleteMixin</td><td><code>DateTime</code> NULL, indexed</td><td><code>NULL</code></td><td>Set by <code>soft_delete()</code></td></tr>
+    </tbody>
+  </table></div>
+  <p>All defaults are Python-side; no <code>server_default</code> is set, which keeps Alembic diffs clean. Every column in this table is <a href="#protected-fields">protected</a>: input passed to <code>update()</code> or <code>create_or_abort()</code> can't set it.</p>
+</section>
+
+<section class="doc" id="community" data-group="Reference">
+  <span class="eyebrow">Project</span>
+  <h2><a class="anchor" href="#community">Community &amp; stats</a></h2>
+  <p>flask-modelkit is free and open source. If it saves you from writing another base model, <strong>star it on GitHub</strong>. Stars are how other Flask developers find it.</p>
+  <div class="cta-row">
+    <a class="btn primary" href="https://github.com/AnozieChibuike/FlaskModelKit" target="_blank" rel="noopener">★ Star on GitHub</a>
+    <a class="btn" href="https://github.com/AnozieChibuike/FlaskModelKit/issues/new" target="_blank" rel="noopener">Report an issue</a>
+    <a class="btn" href="https://pypi.org/project/flask-modelkit/" target="_blank" rel="noopener">View on PyPI</a>
+  </div>
+
+  <h3>Live numbers</h3>
+  <div class="stats wide">
+    <a class="stat" href="https://github.com/AnozieChibuike/FlaskModelKit/stargazers" target="_blank" rel="noopener"><span class="num" data-stat="stars">—</span><span class="lbl">GitHub stars</span></a>
+    <a class="stat" href="https://github.com/AnozieChibuike/FlaskModelKit/forks" target="_blank" rel="noopener"><span class="num" data-stat="forks">—</span><span class="lbl">forks</span></a>
+    <a class="stat" href="https://github.com/AnozieChibuike/FlaskModelKit/issues" target="_blank" rel="noopener"><span class="num" data-stat="issues">—</span><span class="lbl">open issues &amp; PRs</span></a>
+    <a class="stat" href="https://pypi.org/project/flask-modelkit/#history" target="_blank" rel="noopener"><span class="num" data-stat="version">—</span><span class="lbl">latest release</span><span class="sub" data-stat="released"></span></a>
+    <a class="stat" href="https://pypistats.org/packages/flask-modelkit" target="_blank" rel="noopener"><span class="num" data-stat="week">—</span><span class="lbl">downloads / week</span></a>
+    <a class="stat" href="https://pypistats.org/packages/flask-modelkit" target="_blank" rel="noopener"><span class="num" data-stat="month">—</span><span class="lbl">downloads / month</span></a>
+    <a class="stat" href="https://pepy.tech/projects/flask-modelkit" target="_blank" rel="noopener"><span class="num" data-stat="total">—</span><span class="lbl">downloads, all time</span></a>
+    <a class="stat" href="https://pepy.tech/projects/flasksqlalchemybasemodel" target="_blank" rel="noopener"><span class="num" data-stat="legacy">—</span><span class="lbl">as FlaskSQLAlchemyBaseModel</span></a>
+  </div>
+  <p class="stats-note">Stars, forks and issues come from the GitHub API. Downloads come from PyPI via pypistats (weekly, monthly) and pepy (all time), and include CI and mirror traffic, so read them as a trend rather than a user count. The numbers refresh at most once an hour.</p>
+
+  <h3>Star history</h3>
+  <a class="chart-card" href="https://star-history.com/#AnozieChibuike/FlaskModelKit&amp;Date" target="_blank" rel="noopener">
+    <img id="star-chart" loading="lazy" alt="Chart of flask-modelkit GitHub stars over time"
+      src="https://api.star-history.com/svg?repos=AnozieChibuike/FlaskModelKit&amp;type=Date"
+      data-light="https://api.star-history.com/svg?repos=AnozieChibuike/FlaskModelKit&amp;type=Date"
+      data-dark="https://api.star-history.com/svg?repos=AnozieChibuike/FlaskModelKit&amp;type=Date&amp;theme=dark">
+  </a>
+
+  <h3>Show that you use it</h3>
+  <p>Add a badge to your project's README:</p>
+  <div class="code"><pre><code class="language-markdown">[![built with flask-modelkit](https://img.shields.io/badge/built%20with-flask--modelkit-A84E08)](https://anoziechibuike.github.io/FlaskModelKit/)</code></pre></div>
+</section>
+
+<section class="doc" id="gotchas" data-group="Reference">
+  <span class="eyebrow">Reference</span>
+  <h2><a class="anchor" href="#gotchas">Gotchas &amp; FAQ</a></h2>
+  <div class="sub">
+    <h3>"TypeError: X must also inherit from a Flask-SQLAlchemy db.Model"</h3>
+    <p>You used <code>CRUDMixin</code> or <code>SoftDeleteMixin</code> on a class that isn't a Flask-SQLAlchemy model. Add <code>db.Model</code> as the last base.</p>
+    <h3>My <code>id</code> is <code>None</code> before saving</h3>
+    <p>Either you are on <code>IntIdMixin</code> (expected), or <code>db.Model</code> comes before the mixins. See <a href="#ordering-rule">the ordering rule</a>.</p>
+    <h3>"Working outside of application context"</h3>
+    <p>All helpers use <code>db.session</code>. In scripts and tests, wrap calls in <code>with app.app_context():</code>.</p>
+    <h3>Can I write <code>db.Column(..., hidden=True)</code> or <code>protected=True</code>?</h3>
+    <p>No. SQLAlchemy rejects unknown keyword arguments on <code>Column</code>. Use <code>hidden_column(...)</code>, <code>protected_column(...)</code> or <code>secret_column(...)</code>, or put the flags in <code>info</code>: <code>info={"hidden": True, "protected": True}</code>.</p>
+    <h3>Hidden or protected: which do I need?</h3>
+    <p>Hidden stops data going <em>out</em>; protected stops it coming <em>in</em>. Secrets need both, so use <code>secret_column()</code>. The <a href="#hidden-vs-protected">field picker</a> answers it for any field.</p>
+    <h3>Why are my timestamps not timezone-aware?</h3>
+    <p>By design: naive UTC behaves identically on every database. Attach the zone when displaying: <code>dt.replace(tzinfo=timezone.utc)</code>.</p>
+    <h3>A soft-deleted user's email blocks new signups</h3>
+    <p>Unique constraints see every row. Use a partial index, as in <a href="#soft-delete">Soft delete → Limits</a>.</p>
+    <h3>Why not <code>create(abort=True)</code>?</h3>
+    <p><code>create(**kwargs)</code> passes every keyword to your model, so a flag would clash with a column of the same name. <code>create()</code> is also used in scripts and CLI commands where HTTP errors make no sense. <code>create_or_abort()</code> is a separate method for request data, in the style of <code>get_or_404()</code>.</p>
+    <h3><code>create_or_abort()</code> raises "required field(s) … can never be filled"</h3>
+    <p>A required column is protected, or left out of <code>fields=</code>, and you didn't pass it. Input can never fill it, so every insert would fail. This is usually a foreign key like <code>author_id</code>, or a field such as <code>email</code> that you protected but still need at signup. Pass it, or its relationship, as a trusted value: <code>Post.create_or_abort(data, author=current_user)</code>. If clients <em>should</em> send it, don't protect it; see <a href="#set-once">"Set once, read-only afterwards"</a>.</p>
+    <h3>I got an <code>IntegrityError</code> from <code>create_or_abort()</code>, not a 409</h3>
+    <p>It only turns unique-value conflicts into 409s. Anything else, such as a <code>CHECK</code> constraint, a foreign key to a missing row, or a trusted value you passed as <code>None</code>, is re-raised after the rollback so real bugs aren't hidden.</p>
+    <h3>How do I change the error response format?</h3>
+    <p>Register a handler for the exception class. It receives the field names on <code>e.fields</code>. See <a href="#create-or-abort">Error responses</a>.</p>
+    <h3>Does it work with type checkers?</h3>
+    <p>Yes. The package ships <code>py.typed</code> and the class methods are generic over your model, so <code>User.get(id)</code> is <code>User | None</code>.</p>
+  </div>
+
+  <nav class="pager" aria-label="Pagination">
+    <a href="#example-lookup"><small>Previous</small>Lookup tables</a>
+    <a href="#introduction" style="text-align:right"><small>Back to top</small>Introduction</a>
+  </nav>
+  <footer class="foot">
+    <span>flask-modelkit · MIT licence · <a href="https://github.com/AnozieChibuike/FlaskModelKit" target="_blank" rel="noopener">★ Star on GitHub</a> · <a href="https://anoziechibuike.github.io/FlaskModelKit/AGENT.md">AGENT.md</a></span>
+    <span>Python 3.10–3.13 · Flask-SQLAlchemy 3.1+</span>
+  </footer>
+</section>
+
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" data-manual></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+<script>
+(function () {
+  const root = document.documentElement;
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  /* ---------- theme ---------- */
+  const themeBtn = document.getElementById('theme-btn');
+  const moon = document.getElementById('ico-moon'), sun = document.getElementById('ico-sun');
+  const isDark = () => root.dataset.theme ? root.dataset.theme === 'dark'
+    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  function paintIcon() {
+    const d = isDark();
+    moon.hidden = d; sun.hidden = !d;
+    themeBtn.setAttribute('aria-label', d ? 'Switch to light theme' : 'Switch to dark theme');
+  }
+  const saved = store.get('fsbm-theme');
+  if (saved === 'dark' || saved === 'light') root.dataset.theme = saved;
+  paintIcon();
+  themeBtn.addEventListener('click', () => {
+    const next = isDark() ? 'light' : 'dark';
+    root.dataset.theme = next; store.set('fsbm-theme', next); paintIcon();
+  });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', paintIcon);
+
+  /* ---------- highlight ---------- */
+  const hl = el => { if (window.Prism) Prism.highlightElement(el); };
+  document.querySelectorAll('pre code[class*="language-"]').forEach(hl);
+
+  /* ---------- copy buttons ---------- */
+  document.querySelectorAll('.code').forEach(block => {
+    if (block.querySelector('.copy') || block.hasAttribute('data-tabs')) return;
+    const b = document.createElement('button');
+    b.className = 'copy'; b.textContent = 'Copy'; b.type = 'button';
+    block.appendChild(b);
+  });
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.copy');
+    if (!btn) return;
+    let text = btn.dataset.copy;
+    let codeEl = null;
+    if (!text) {
+      const scope = btn.closest('.tabpanel') || btn.closest('.code');
+      codeEl = scope && scope.querySelector('pre code');
+      text = codeEl ? codeEl.textContent : '';
+    }
+    const done = () => { btn.textContent = 'Copied'; btn.classList.add('done');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('done'); }, 1400); };
+    const fallback = () => {
+      const target = codeEl || btn.parentElement.querySelector('span');
+      if (!target) return;
+      const r = document.createRange(); r.selectNodeContents(target);
+      const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      btn.textContent = 'Press ⌘C';
+    };
+    try {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } catch (err) { fallback(); }
+  });
+
+  /* ---------- tabs ---------- */
+  document.querySelectorAll('[data-tabs]').forEach(box => {
+    const btns = box.querySelectorAll('[data-tab]');
+    const panels = box.querySelectorAll('[data-panel]');
+    btns.forEach(b => b.addEventListener('click', () => {
+      btns.forEach(x => x.setAttribute('aria-selected', String(x === b)));
+      panels.forEach(p => { p.hidden = p.dataset.panel !== b.dataset.tab; });
+    }));
+  });
+
+  /* ---------- mobile nav ---------- */
+  const menuBtn = document.getElementById('menu-btn');
+  const closeNav = () => { document.body.classList.remove('nav-open'); menuBtn.setAttribute('aria-expanded', 'false'); };
+  menuBtn.addEventListener('click', () => {
+    const open = document.body.classList.toggle('nav-open');
+    menuBtn.setAttribute('aria-expanded', String(open));
+  });
+  document.getElementById('scrim').addEventListener('click', closeNav);
+  document.querySelectorAll('.nav-panel a').forEach(a => a.addEventListener('click', closeNav));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
+
+  /* ---------- scrollspy ---------- */
+  const navLinks = [...document.querySelectorAll('.nav-panel a')];
+  const byId = new Map(navLinks.map(a => [a.getAttribute('href').slice(1), a]));
+  const sections = [...document.querySelectorAll('main section.doc')];
+  function setActive(id) {
+    navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + id));
+    const a = byId.get(id);
+    if (a && window.innerWidth > 960) {
+      const panel = document.getElementById('nav-panel');
+      const r = a.getBoundingClientRect(), pr = panel.getBoundingClientRect();
+      if (r.top < pr.top + 40 || r.bottom > pr.bottom - 40) panel.scrollTop += r.top - pr.top - pr.height / 2;
+    }
+  }
+  let ticking = false;
+  function spy() {
+    ticking = false;
+    const y = 120;
+    let cur = sections[0];
+    for (const s of sections) { if (s.getBoundingClientRect().top - y <= 0) cur = s; else break; }
+    if (cur) setActive(cur.id);
+  }
+  window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(spy); } }, { passive: true });
+  spy();
+
+  /* ---------- search ---------- */
+  const input = document.getElementById('search-input');
+  const results = document.getElementById('search-results');
+  const index = [];
+  sections.forEach(s => {
+    const h = s.querySelector('h1, h2');
+    if (!h) return;
+    const title = s.id === 'introduction' ? 'Introduction' : h.textContent.trim();
+    index.push({ id: s.id, title, group: s.dataset.group || '', text: s.textContent.toLowerCase() });
+  });
+  document.querySelectorAll('.api[id]').forEach(a => {
+    const n = a.querySelector('.name');
+    index.push({ id: a.id, title: n.textContent.trim(), group: 'API reference', text: a.textContent.toLowerCase() });
+  });
+  let sel = 0, hits = [];
+  function render() {
+    const q = input.value.trim().toLowerCase();
+    if (!q) { results.hidden = true; return; }
+    const terms = q.split(/\s+/);
+    hits = index.map(e => {
+      const t = e.title.toLowerCase();
+      if (!terms.every(w => e.text.includes(w) || t.includes(w))) return null;
+      let score = 0;
+      terms.forEach(w => { if (t.includes(w)) score += 10; if (t.startsWith(w)) score += 5; });
+      return { e, score };
+    }).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, 8).map(h => h.e);
+    sel = 0;
+    results.innerHTML = '';
+    if (!hits.length) {
+      const li = document.createElement('li'); li.className = 'empty';
+      li.textContent = 'No matches for "' + input.value.trim() + '". Try a method name like update or to_dict.';
+      results.appendChild(li);
+    }
+    hits.forEach((h, i) => {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = '#' + h.id; if (i === sel) a.className = 'sel';
+      a.textContent = h.title;
+      const sm = document.createElement('small'); sm.textContent = h.group; a.appendChild(sm);
+      a.addEventListener('click', () => { results.hidden = true; input.value = ''; closeNav(); });
+      li.appendChild(a); results.appendChild(li);
+    });
+    results.hidden = false;
+  }
+  input.addEventListener('input', render);
+  input.addEventListener('keydown', e => {
+    const links = results.querySelectorAll('a');
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault(); if (!links.length) return;
+      sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length;
+      links.forEach((l, i) => l.classList.toggle('sel', i === sel));
+    } else if (e.key === 'Enter' && links[sel]) {
+      e.preventDefault(); links[sel].click(); location.hash = links[sel].getAttribute('href');
+    } else if (e.key === 'Escape') { input.value = ''; results.hidden = true; input.blur(); }
+  });
+  input.addEventListener('blur', () => setTimeout(() => { results.hidden = true; }, 150));
+  input.addEventListener('focus', render);
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && document.activeElement !== input && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
+      e.preventDefault(); input.focus();
+    }
+  });
+
+  /* ---------- mixin builder ---------- */
+  const $ = id => document.getElementById(id);
+  const out = { code: $('b-code'), schema: $('b-schema'), methods: $('b-methods') };
+  const CRUD = ['create()', 'create_or_abort()', 'save()', 'update()', 'delete()', 'get()', 'get_or_404()', 'all()',
+    'filter_one()', 'filter_all()', 'exists()', 'count_all()', 'filter_and_count_all()', 'paginate()', 'select()'];
+  function build() {
+    const pk = document.querySelector('input[name="pk"]:checked').value;
+    const ts = $('f-ts').checked, crud = $('f-crud').checked, ser = $('f-ser').checked, soft = $('f-soft').checked;
+    let bases = [];
+    if (pk === 'uuid' && ts && crud && ser) {
+      if (soft) bases.push('SoftDeleteMixin');
+      bases.push('BaseModelMixin');
+    } else {
+      if (pk === 'uuid') bases.push('UUIDMixin');
+      if (pk === 'int') bases.push('IntIdMixin');
+      if (ts) bases.push('TimestampMixin');
+      if (soft) bases.push('SoftDeleteMixin');
+      if (crud) bases.push('CRUDMixin');
+      if (ser) bases.push('SerializerMixin');
+    }
+    const lines = [];
+    lines.push('from flask_modelkit import ' + bases.join(', '));
+    lines.push('');
+    lines.push('');
+    lines.push('class Post(' + bases.concat('db.Model').join(', ') + '):');
+    if (pk === 'none') lines.push('    id = db.Column(db.Integer, primary_key=True)   # your own key');
+    lines.push('    title = db.Column(db.String(200), nullable=False)');
+    if (bases.length === 0) lines[0] = '# no mixins selected: a plain Flask-SQLAlchemy model';
+    out.code.textContent = lines.join('\n');
+    out.code.className = 'language-python';
+    hl(out.code);
+
+    const rows = [];
+    if (pk === 'uuid') rows.push(['id', 'String(126) PK', 'UUIDMixin', true]);
+    if (pk === 'int') rows.push(['id', 'Integer PK', 'IntIdMixin', true]);
+    if (pk === 'none') rows.push(['id', 'Integer PK', 'your column', true, true]);
+    if (ts) { rows.push(['created_at', 'DateTime NOT NULL', 'TimestampMixin']); rows.push(['updated_at', 'DateTime NOT NULL', 'TimestampMixin']); }
+    if (soft) rows.push(['deleted_at', 'DateTime NULL · index', 'SoftDeleteMixin']);
+    rows.push(['title', 'String(200) NOT NULL', 'your column', false, true]);
+    out.schema.innerHTML = '';
+    const head = document.createElement('div'); head.className = 'schema-head';
+    head.innerHTML = '<span>table post</span><span>' + rows.length + ' columns</span>';
+    out.schema.appendChild(head);
+    rows.forEach(r => {
+      const d = document.createElement('div'); d.className = 'schema-row' + (r[4] ? ' own' : '');
+      const a = document.createElement('span'); a.textContent = r[0]; if (r[3]) a.className = 'pk';
+      const b = document.createElement('span'); b.textContent = r[1];
+      const c = document.createElement('span'); c.className = 'src'; c.textContent = r[2];
+      d.append(a, b, c); out.schema.appendChild(d);
+    });
+
+    const m = [];
+    if (crud) m.push(...CRUD);
+    if (ser) m.push('to_dict()');
+    if (soft) m.push('soft_delete()', 'restore()', 'is_deleted');
+    out.methods.innerHTML = '';
+    if (!m.length) { const s = document.createElement('span'); s.className = 'none'; s.textContent = 'None. Use db.session directly.'; out.methods.appendChild(s); }
+    m.forEach(x => { const c = document.createElement('code'); c.textContent = x; out.methods.appendChild(c); });
+  }
+  document.querySelectorAll('#builder input').forEach(i => i.addEventListener('change', build));
+  build();
+})();
+</script>
+<script>
+(function () {
+  var REPO = 'AnozieChibuike/FlaskModelKit', PKG = 'flask-modelkit', LEGACY = 'flasksqlalchemybasemodel';
+  var KEY = 'fmk-stats-v1', TTL = 60 * 60 * 1000;
+  var store = {
+    get: function () { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } },
+    set: function (v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} }
+  };
+  /* star-history chart follows the page theme */
+  var chart = document.getElementById('star-chart');
+  function paintChart() {
+    if (!chart) return;
+    var root = document.documentElement;
+    var dark = root.dataset.theme ? root.dataset.theme === 'dark'
+      : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var want = dark ? chart.dataset.dark : chart.dataset.light;
+    if (chart.getAttribute('src') !== want) chart.setAttribute('src', want);
+  }
+  paintChart();
+  var btn = document.getElementById('theme-btn');
+  if (btn) btn.addEventListener('click', function () { setTimeout(paintChart, 0); });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', paintChart);
+
+  function compact(n) {
+    if (typeof n !== 'number') return n;
+    if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(n >= 1e4 ? 0 : 1).replace(/\.0$/, '') + 'k';
+    return String(n);
+  }
+  function json(url) {
+    return fetch(url).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+  }
+  function shield(path, strip) {
+    return json('https://img.shields.io/' + path + '.json').then(function (d) {
+      var v = String(d.value || '');
+      if (!v || /not found|invalid|inaccessible|error/i.test(v)) throw new Error(v);
+      return strip ? v.replace(strip, '') : v;
+    });
+  }
+  function render(v) {
+    document.querySelectorAll('[data-stat]').forEach(function (el) {
+      var x = v[el.dataset.stat];
+      var has = x !== undefined && x !== null && x !== '';
+      if (el.hasAttribute('data-hide-empty')) el.hidden = !has;
+      el.textContent = has ? x : (el.classList.contains('sub') ? '' : '—');
+    });
+  }
+  function fetchAll() {
+    var v = {};
+    var jobs = [
+      json('https://api.github.com/repos/' + REPO).then(function (d) {
+        v.stars = compact(d.stargazers_count); v.forks = compact(d.forks_count); v.issues = compact(d.open_issues_count);
+      }),
+      json('https://pypi.org/pypi/' + PKG + '/json').then(function (d) {
+        v.version = 'v' + d.info.version;
+        var files = d.releases[d.info.version] || [];
+        if (files[0]) v.released = new Date(files[0].upload_time_iso_8601 || files[0].upload_time)
+          .toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      }),
+      shield('pypi/dw/' + PKG, '/week').then(function (x) { v.week = x; }),
+      shield('pypi/dm/' + PKG, '/month').then(function (x) { v.month = x; }),
+      shield('pepy/dt/' + PKG).then(function (x) { v.total = x; }),
+      shield('pepy/dt/' + LEGACY).then(function (x) { v.legacy = x; })
+    ];
+    return Promise.allSettled(jobs).then(function () { return v; });
+  }
+  var cached = store.get();
+  if (cached && cached.v) render(cached.v);
+  if (window.fetch && (!cached || Date.now() - cached.t > TTL)) {
+    Promise.resolve().then(fetchAll).then(function (v) {
+      if (Object.keys(v).length) {
+        var merged = Object.assign({}, cached && cached.v, v);
+        store.set({ t: Date.now(), v: merged }); render(merged);
+      }
+    }).catch(function () {});
+  }
+
+})();
+</script>
+</body>
+</html>

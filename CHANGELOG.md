@@ -5,6 +5,7 @@
 First release under the new name. This package continues
 `FlaskSQLAlchemyBaseModel` (last release 1.2.0). Install with
 `pip install flask-modelkit` and import from `flask_modelkit`.
+Documentation: https://anoziechibuike.github.io/FlaskModelKit/
 
 ### Added
 
@@ -17,13 +18,24 @@ First release under the new name. This package continues
 - `create_or_abort()`: create from request data. Drops unknown and protected
   keys, raises `MissingFieldsError` (400) naming missing fields and
   `DuplicateValueError` (409) naming taken unique fields, both as JSON.
-- `__protected_fields__`: fields `update()` and `create_or_abort()` never set.
-- Hidden fields: `hidden_column()`, `info={"hidden": True}` and
-  `__hidden_fields__` keep values such as password hashes out of `to_dict()`.
+- Protected fields, which `update()` and `create_or_abort()` never set from
+  input: `protected_column()`, `info={"protected": True}` on columns and
+  relationships, and `__protected_fields__`. `Model.protected_fields()`
+  returns the combined set.
+- Hidden fields, which `to_dict()` never outputs: `hidden_column()`,
+  `info={"hidden": True}` and `__hidden_fields__`.
+- `secret_column()`: hidden and protected at once, for password hashes, API
+  keys and tokens.
+- `create_or_abort()` raises a `TypeError` naming the field and the fix when a
+  required column is protected or outside `fields=` and wasn't passed as a
+  keyword argument, instead of failing later with a database error.
 - `to_dict(depth=, exclude=, json_safe=)`.
 - `select()`, a starting point for custom queries.
 - `commit=False` on every write method, for grouping changes in one transaction.
 - `py.typed`; class methods return your model type.
+- `AGENT.md`: rules for AI coding agents (Claude Code, Cursor, Copilot,
+  AGENTS.md readers), served at
+  https://anoziechibuike.github.io/FlaskModelKit/AGENT.md.
 
 ### Changed
 

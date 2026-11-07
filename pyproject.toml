@@ -1,12 +1,13 @@
 [tool.poetry]
 name = "flask-modelkit"
 version = "1.0.0"
-description = "A reusable base model for Flask-SQLAlchemy: UUID primary keys, UTC timestamps, safe updates, cycle-safe serialisation and typed CRUD/query helpers."
+description = "Composable model mixins for Flask-SQLAlchemy: UUID keys, UTC timestamps, soft delete, safe writes from request data, hidden and protected fields, and typed CRUD helpers."
 authors = ["AnozieChibuike <chibuikeanozie0@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/AnozieChibuike/FlaskModelKit"
 repository = "https://github.com/AnozieChibuike/FlaskModelKit"
+documentation = "https://anoziechibuike.github.io/FlaskModelKit/"
 keywords = ["flask", "sqlalchemy", "flask-sqlalchemy", "orm", "base model", "mixin", "soft delete", "uuid"]
 classifiers = [
     "Framework :: Flask",

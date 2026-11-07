@@ -62,8 +62,9 @@ What it does, in order:
 
 1. **Rejects a non-object body** with `InvalidBodyError` (400).
 2. **Drops keys** that aren't mapped attributes or are in `__protected_fields__`. Pass `fields=["title", "body"]` to accept only those.
-3. **Checks required fields.** Every `NOT NULL` column without a default is required. Passing a relationship (`author=...`) counts for its foreign-key column. `required=[...]` adds input names that aren't columns. `None` and blank strings count as missing. All missing fields are reported at once with `MissingFieldsError` (400).
-4. **Creates and commits.** If a unique value is taken, the session is rolled back and `DuplicateValueError` (409) names the field. Other integrity errors are re-raised so real bugs aren't hidden.
+3. **Checks the endpoint itself.** If a required column can never be filled, because it is protected or left out of `fields=` and you didn't pass it as a keyword argument, a `TypeError` names the field and the fix. It is raised on every call, even for an empty body, so you find it the first time you try the route.
+4. **Checks required fields.** Every `NOT NULL` column without a default is required. Passing a relationship (`author=...`) counts for its foreign-key column. `required=[...]` adds input names that aren't columns. `None` and blank strings count as missing. All missing fields are reported at once with `MissingFieldsError` (400).
+5. **Creates and commits.** If a unique value is taken, the session is rolled back and `DuplicateValueError` (409) names the field. Other integrity errors are re-raised so real bugs aren't hidden.
 
 Keyword arguments (`author=`, `password_hash=`) are trusted values: they override `data` and skip protection.
 

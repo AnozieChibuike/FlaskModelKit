@@ -376,6 +376,9 @@ class CRUDMixin(_SessionMixin):
           strings count as missing.
 
         Raises:
+            TypeError: a required column can never be filled because it is
+                protected or outside ``fields``, and wasn't passed as a
+                keyword argument. A bug in the endpoint; raised on every call.
             InvalidBodyError: 400, ``data`` is not a mapping.
             MissingFieldsError: 400, listing every missing field.
             DuplicateValueError: 409, a unique value is taken. The session is
@@ -397,6 +400,7 @@ class CRUDMixin(_SessionMixin):
         kwargs = {**clean, **values}
 
         mapper = sa.inspect(cls)
+        cls._check_reachable(mapper, accepted, values.keys(), fields)  # type: ignore[attr-defined]
         satisfied = {k for k, v in kwargs.items() if not _blank(v)}
         for rel in mapper.relationships:
             if rel.key in satisfied:
@@ -425,6 +429,50 @@ class CRUDMixin(_SessionMixin):
                 raise DuplicateValueError(cls.__name__, taken) from None
             raise
         return obj
+
+    @classmethod
+    def _check_reachable(
+        cls,
+        mapper: Any,
+        accepted: set[str],
+        passed: Iterable[str],
+        fields: Iterable[str] | None,
+    ) -> None:
+        """Raise ``TypeError`` if a required column can never be filled.
+
+        A NOT NULL column without a default that input may not set (it is
+        protected, or left out of ``fields=``) and that wasn't passed as a
+        keyword argument would always fail at INSERT. That is a bug in the
+        endpoint, not the request, so it is reported on every call instead of
+        surfacing as a database error only when the rest of the input is
+        valid.
+        """
+        provided = set(passed)
+        for rel in mapper.relationships:
+            if rel.key in provided:
+                provided.update(mapper.get_property_by_column(c).key for c in rel.local_columns)
+
+        unreachable = [
+            k for k in _required_columns(cls) if k not in accepted and k not in provided
+        ]
+        if not unreachable:
+            return
+
+        protected = cls._protected_keys()  # type: ignore[attr-defined]
+        reasons = []
+        for k in unreachable:
+            if k in protected:
+                reasons.append(f"'{k}' is protected, so request data can't set it")
+            else:
+                reasons.append(f"'{k}' is not in fields={sorted(fields or [])!r}")
+        example = ", ".join(f"{k}=..." for k in unreachable)
+        raise TypeError(
+            f"{cls.__name__}.create_or_abort(): required field(s) "
+            f"{', '.join(unreachable)} can never be filled: {'; '.join(reasons)}. "
+            f"Pass them as keyword arguments, e.g. "
+            f"{cls.__name__}.create_or_abort(data, {example}), or, if clients "
+            f"should send them, stop protecting them / add them to fields=."
+        )
 
     @classmethod
     def _taken_unique_fields(cls, values: Mapping[str, Any]) -> list[str]:

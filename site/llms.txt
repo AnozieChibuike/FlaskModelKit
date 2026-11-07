@@ -1,0 +1,14 @@
+# flask-modelkit
+
+> Composable model mixins for Flask-SQLAlchemy: UUID keys, UTC timestamps, soft delete, safe writes from request data (create_or_abort, update), hidden and protected fields, and typed CRUD helpers. Install with `pip install flask-modelkit`; import from `flask_modelkit`.
+
+## Docs
+
+- [Agent instructions](https://anoziechibuike.github.io/FlaskModelKit/AGENT.md): the rules an AI coding agent must follow when writing code with flask-modelkit. Read this first.
+- [Documentation](https://anoziechibuike.github.io/FlaskModelKit/): guides, project examples and the full API reference.
+
+## Optional
+
+- [Source code](https://github.com/AnozieChibuike/FlaskModelKit)
+- [PyPI](https://pypi.org/project/flask-modelkit/)
+- [Changelog](https://github.com/AnozieChibuike/FlaskModelKit/blob/master/CHANGELOG.md)

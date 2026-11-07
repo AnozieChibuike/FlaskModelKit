@@ -46,8 +46,8 @@ from flask_modelkit import BaseModelMixin, hidden_column
 
 class User(BaseModelMixin, db.Model):
     name = db.Column(db.String(50))
-    internal_notes = hidden_column(db.Text)                        # shorthand
-    review_score = db.Column(db.Integer, info={"hidden": True})    # same thing
+    webhook_secret = hidden_column(db.String(64))                  # shorthand
+    last_error = db.Column(db.Text, info={"hidden": True})         # same thing
     audit_log = db.relationship("AuditEntry", info={"hidden": True})
 ```
 

@@ -9,7 +9,7 @@ These are two separate controls over what crosses your API boundary:
 | Mark a column | `hidden_column(...)` or `info={"hidden": True}` | `protected_column(...)` or `info={"protected": True}` |
 | Mark by name | `__hidden_fields__` | `__protected_fields__` |
 | Defaults | nothing | `id`, `created_at`, `updated_at`, `deleted_at` |
-| Typical fields | internal notes, audit data | `is_admin`, `role`, `owner_id`, `balance` |
+| Typical fields | write-only input (a webhook secret the user pastes in), large relationships | `is_admin`, `role`, `owner_id`, `balance` |
 
 A field can be either, both or neither. For fields that need **both**, use `secret_column(...)`:
 
@@ -17,8 +17,8 @@ A field can be either, both or neither. For fields that need **both**, use `secr
 |---|:-:|:-:|---|
 | `name`, `bio` | | | `db.Column(...)` |
 | `is_admin`, `role` | | ✓ | `protected_column(...)` |
-| `internal_notes` | ✓ | | `hidden_column(...)` |
-| `password_hash`, `api_key`, `reset_token` | ✓ | ✓ | `secret_column(...)` |
+| A webhook secret the user pastes in (write-only) | ✓ | | `hidden_column(...)` |
+| `password_hash`, `api_key`, `reset_token`, `internal_notes` | ✓ | ✓ | `secret_column(...)` |
 
 ```python
 from flask_modelkit import BaseModelMixin, hidden_column, protected_column, secret_column
@@ -26,7 +26,7 @@ from flask_modelkit import BaseModelMixin, hidden_column, protected_column, secr
 class User(BaseModelMixin, db.Model):
     name = db.Column(db.String(80), nullable=False)
     is_admin = protected_column(db.Boolean, default=False, nullable=False)
-    internal_notes = hidden_column(db.Text)
+    webhook_secret = hidden_column(db.String(64))   # write-only: accepted, never sent back
     password_hash = secret_column(db.String(255), nullable=False)
 ```
 
@@ -101,7 +101,7 @@ User.create(name="Ada", is_admin=True)                # create() is for trusted 
 User.create_or_abort(data, password_hash=hash_pw(pw)) # keyword arguments are trusted
 ```
 
-This also means a protected, `NOT NULL` column without a default must always be passed as a keyword argument to `create_or_abort()`. Client input can never fill it:
+This also means a protected, `NOT NULL` column without a default must always be passed as a keyword argument to `create_or_abort()`. Client input can never fill it, and if you forget, `create_or_abort()` raises a `TypeError` naming the field:
 
 ```python
 data = request.get_json(silent=True) or {}

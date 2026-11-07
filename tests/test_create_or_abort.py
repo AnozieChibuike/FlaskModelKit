@@ -5,10 +5,12 @@ from flask import request
 from sqlalchemy.exc import IntegrityError
 
 from flask_modelkit import (
+    BaseModel,
     DuplicateValueError,
     InvalidBodyError,
     MissingFieldsError,
     db,
+    protected_column,
 )
 
 from .models import Customer, Seat, Ticket
@@ -129,10 +131,69 @@ def test_commit_false_still_detects_duplicates(app):
         Customer.create_or_abort({"name": "C", "email": "a@x.io"}, commit=False, **PW)
 
 
+class Gauge(BaseModel):
+    __test__ = False
+    level = db.Column(db.Integer, db.CheckConstraint("level >= 0", name="level_non_negative"), nullable=False)
+
+
+class Badge(BaseModel):
+    __test__ = False
+    label = db.Column(db.String(20), nullable=False)
+    code = protected_column(db.String(20), nullable=False)
+    owner_id = protected_column(db.String(126), db.ForeignKey("customer.id"), nullable=False)
+    owner = db.relationship("Customer", info={"protected": True})
+
+
 def test_other_integrity_errors_are_reraised(app):
-    # email is NOT NULL but excluded by `fields`, so the database rejects it.
+    # A CHECK constraint violation is a real database error, not a duplicate.
     with pytest.raises(IntegrityError):
+        Gauge.create_or_abort({"level": -1})
+    assert Gauge.count_all() == 0          # session was rolled back and is usable
+
+
+def _customer():
+    return Customer.create(name="C", email="c@x.io", **PW)
+
+
+def test_protected_required_field_not_passed_is_a_clear_type_error(app):
+    owner = _customer()
+    with pytest.raises(TypeError) as e:
+        Badge.create_or_abort({"label": "x", "code": "ABC"}, owner=owner)
+    msg = str(e.value)
+    assert "Badge.create_or_abort()" in msg and "'code' is protected" in msg
+    assert "Badge.create_or_abort(data, code=...)" in msg
+    assert "owner_id" not in msg               # satisfied by the owner= relationship
+    assert Badge.count_all() == 0
+
+
+def test_type_error_raised_even_when_request_is_incomplete(app):
+    # The bug is in the endpoint, so it surfaces on every call, before any 400.
+    with pytest.raises(TypeError, match="code, owner_id"):
+        Badge.create_or_abort({})
+
+
+def test_protected_required_field_passed_as_keyword_works(app):
+    owner = _customer()
+    badge = Badge.create_or_abort({"label": "x", "code": "HACK"}, code="ABC", owner=owner)
+    assert (badge.code, badge.owner_id) == ("ABC", owner.id)
+
+
+def test_foreign_key_passed_directly_counts(app):
+    owner = _customer()
+    badge = Badge.create_or_abort({"label": "x"}, code="ABC", owner_id=owner.id)
+    assert badge.owner is owner
+
+
+def test_field_left_out_of_fields_allowlist_is_a_clear_type_error(app):
+    with pytest.raises(TypeError, match=r"'email' is not in fields=\['name'\]"):
         Customer.create_or_abort({"name": "A", "email": "a@x.io"}, fields=["name"], **PW)
+
+
+def test_blank_trusted_value_still_reports_missing_input(app):
+    # Docs pattern: password_hash=None when the password is missing → 400, not TypeError.
+    with pytest.raises(MissingFieldsError) as e:
+        Customer.create_or_abort({"name": "A", "email": "a@x.io"}, required=["password"], password_hash=None)
+    assert e.value.fields == ["password"]
 
 
 def test_through_a_flask_route(app):
