@@ -1,9 +1,9 @@
 # flask-modelkit
 
 [![Tests](https://github.com/AnozieChibuike/FlaskModelKit/actions/workflows/tests.yml/badge.svg)](https://github.com/AnozieChibuike/FlaskModelKit/actions/workflows/tests.yml)
-[![PyPI](https://img.shields.io/pypi/v/flask-modelkit)](https://pypi.org/project/flask-modelkit/)
+[![PyPI](https://img.shields.io/pypi/v/flask-modelkit?label=pypi)](https://pypi.org/project/flask-modelkit/)
 [![Docs](https://img.shields.io/badge/docs-flask--modelkit-A84E08)](https://anoziechibuike.github.io/FlaskModelKit/)
-[![Python](https://img.shields.io/pypi/pyversions/flask-modelkit)](https://pypi.org/project/flask-modelkit/)
+[![Python](https://img.shields.io/pypi/pyversions/flask-modelkit?label=python)](https://pypi.org/project/flask-modelkit/)
 [![Downloads/month](https://img.shields.io/pypi/dm/flask-modelkit)](https://pypistats.org/packages/flask-modelkit)
 [![Total downloads](https://img.shields.io/pepy/dt/flask-modelkit)](https://pepy.tech/projects/flask-modelkit)
 [![GitHub stars](https://img.shields.io/github/stars/AnozieChibuike/FlaskModelKit?style=flat&logo=github)](https://github.com/AnozieChibuike/FlaskModelKit/stargazers)
